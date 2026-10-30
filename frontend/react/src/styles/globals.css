@@ -1,0 +1,71 @@
+@import 'tailwindcss';
+
+/* Tokens do Alquimia DS (pacote radar-suite-claude-code, project/handoff/tokens.css).
+   Cinzas sempre azulados (navy), nunca cinza neutro. Ação do Backoffice: laranja. */
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-background: #fafbfc;
+  --color-foreground: #061938;
+  --color-surface: #ffffff;
+  --color-subtle: #f0f3f6;
+  --color-rail: #f2f3f3;
+  --color-selected: #e5e8eb;
+  --color-selected-foreground: #00389e;
+
+  --color-primary: #f25c05;
+  --color-primary-hover: #c24503;
+  --color-primary-foreground: #ffffff;
+  --color-primary-soft: #fff1e8;
+  --color-primary-tint: #fff9f5;
+
+  --color-muted: #f0f3f6;
+  --color-muted-foreground: #6b7a90;
+  --color-secondary-foreground: #42526e;
+  --color-disabled-foreground: #9aa5b5;
+  --color-control: #c9d1db;
+
+  --color-destructive: #df0028;
+  --color-destructive-hover: #b0001f;
+  --color-destructive-foreground: #ffffff;
+  --color-destructive-soft: #fde7ea;
+  --color-destructive-text: #b0001f;
+  --color-destructive-border: #f4b5bf;
+
+  --color-success: #31c072;
+  --color-success-soft: #e6f8ee;
+  --color-success-text: #1b7c4a;
+  --color-warning: #ffc400;
+  --color-warning-soft: #fff6e0;
+  --color-warning-text: #8a5a00;
+  --color-info-soft: #e0f6f8;
+  --color-info-text: #006b7a;
+
+  --color-border: #e5e8eb;
+  --color-ring: #f25c05;
+  --color-overlay: rgb(6 25 56 / 0.4);
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  --shadow-card: 0 2px 4px -1px rgb(179 186 197 / 0.45);
+  --shadow-modal: 0 12px 32px rgb(6 25 56 / 0.22);
+}
+
+@layer base {
+  body {
+    @apply bg-background font-sans text-sm text-foreground antialiased;
+  }
+}
+
+/* Suíte do grupo (tenant): mesmo DS, ação azul e menu escuro (handoff/theming.md). */
+[data-side='tenant'] {
+  --color-primary: #006ff7;
+  --color-primary-hover: #074ac6;
+  --color-primary-soft: #e4f2ff;
+  --color-primary-tint: #f2f8ff;
+  --color-ring: #006ff7;
+  --color-rail: #061938;
+}

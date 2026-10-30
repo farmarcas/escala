@@ -1,0 +1,131 @@
+-- Catálogos da Farmarcas (itens do protótipo "Loja Detalhe", a validar com as áreas) e
+-- estrutura de exemplo da loja LJ-002. FICTÍCIO, só local/dev. Idempotente.
+BEGIN;
+
+INSERT INTO catalog_items (id, kind, name, group_label, description, sort) VALUES
+  ('5bbdabbe-a6ea-5318-b50c-7768dec208ec', 'SERVICE', 'Manipulação de Fórmula', NULL, NULL, 0),
+  ('adb5324d-100a-5526-ae56-95dfb90b113c', 'SERVICE', 'Aferição de Glicemia', NULL, NULL, 1),
+  ('98aab3c3-872e-541b-97ca-beebeb6d7480', 'SERVICE', 'Dermocosméticos', NULL, NULL, 2),
+  ('bc7c7521-3b76-549d-8fdf-fcbaeb5c9294', 'SERVICE', 'Farmácia Popular', NULL, NULL, 3),
+  ('16677dff-5649-5893-9023-7479a9d88bca', 'SERVICE', 'TV PDV', NULL, NULL, 4),
+  ('4f832af0-9bbf-576b-ac49-451623fbe0cf', 'SERVICE', 'Rádio PDV', NULL, NULL, 5),
+  ('18441a9f-8992-55a6-a94b-455cf995960b', 'SERVICE', 'Recarga Celular', NULL, NULL, 6),
+  ('235f6793-2d05-5deb-8829-827ca7097cf6', 'SERVICE', 'Correspondente Bancário', NULL, NULL, 7),
+  ('828e8986-407c-586f-8807-08833784070d', 'SERVICE', 'Aferição de Pressão', NULL, NULL, 8),
+  ('82337c08-b4ae-5ab2-ab8d-e49365a9c1f0', 'SERVICE', 'Convênio Próprio', NULL, NULL, 9),
+  ('599efd00-f522-53eb-99fd-f5eb2e422867', 'DEMAND_SYSTEM', 'Linx Big', NULL, NULL, 0),
+  ('0baa6ee1-3988-5458-b849-3f04acc085dd', 'DEMAND_SYSTEM', 'Trier', NULL, NULL, 1),
+  ('9a19f001-5e0f-5c79-bf60-3b41faf516d4', 'DEMAND_SYSTEM', 'Vetor Farma', NULL, NULL, 2),
+  ('585a6916-2804-534f-8e87-5e28b050d768', 'DEMAND_SYSTEM', 'Inovafarma', NULL, NULL, 3),
+  ('8c90dbe2-a900-5d7f-a83c-ddeedf50459f', 'DEMAND_SYSTEM', 'Digifarma', NULL, NULL, 4),
+  ('f60f1f0e-ae81-56bd-b8c3-c2452d6f5fed', 'PRACTICE_TOOL', 'Imendes', NULL, NULL, 0),
+  ('73c382b1-f5cb-5ef7-abc4-eec01892044f', 'PRACTICE_TOOL', 'Concil', NULL, NULL, 1),
+  ('d5188a32-2137-5604-81a2-213e95b6a882', 'PRACTICE_TOOL', 'Sistema Financeiro Avançado', NULL, NULL, 2),
+  ('1f9837a9-59d5-55a0-a3e5-09dfd0336f62', 'PRACTICE_TOOL', 'Confear', NULL, NULL, 3),
+  ('c0a9b38c-6ef5-51e5-9c0f-463b727c1c6c', 'PBM', 'BSF SAÚDE', 'BSF', NULL, 0),
+  ('392e29d3-baa1-5d1f-8347-d8be5eebba19', 'PBM', 'COLGATE - MAIS SAÚDE BUCAL', 'ePharma', NULL, 1),
+  ('19460117-0109-5c19-aaf0-146b4a8ed33f', 'PBM', 'GRUNENTHAL - CONEXÃO COM VOCÊ', 'ePharma', NULL, 2),
+  ('6a61a2c1-eff4-52c2-a311-04dc87c5d103', 'PBM', 'NOVO NORDISK - NOVO DIA', 'ePharma', NULL, 3),
+  ('50450c38-56e5-59b1-bce5-2ac8035bb4ec', 'PBM', 'RANBAXY - RANBAXY COM VOCÊ', 'ePharma', NULL, 4),
+  ('ffb06801-2aa3-57c5-9544-47858380b42e', 'PBM', 'UNIAO QUIMICA - UNIÃO COM VOCÊ', 'ePharma', NULL, 5),
+  ('b843b172-0929-5ae3-824e-3dc80abb6733', 'PBM', 'ABBOTT - ABRACE A VIDA', 'Funcional', NULL, 6),
+  ('2c283453-d058-5d89-a8b8-7c76dc401362', 'PBM', 'ADIUM S.A - VIVER ADIUM', 'Funcional', NULL, 7),
+  ('76135732-f201-557a-a0ba-20965fe5e746', 'PBM', 'ALLERGAN - VIVER MAIS', 'Funcional', NULL, 8),
+  ('d0fdadfb-2be9-5d2c-8b0d-2b2663fc3797', 'PBM', 'APSEN - SOU MAIS VIDA', 'Funcional', NULL, 9),
+  ('fcb464e8-0e86-5ae6-a2e2-d54f6646e43e', 'PBM', 'CHIESI - ACESSAR', 'Funcional', NULL, 10),
+  ('19cee5f1-d4e2-59a1-ae0a-9a927e2eeac3', 'PBM', 'DAIICHI SANKYO - ADERE SAUDE', 'Funcional', NULL, 11),
+  ('d9af4691-0c3e-5625-83e7-498d5825f8c6', 'PBM', 'MSD - RECEITA DE VIDA', 'Funcional', NULL, 12),
+  ('2394e9a0-40bf-593f-a5e4-0daed1d7c15e', 'PBM', 'MUNDIPHARMA - CUIDAR', 'Funcional', NULL, 13),
+  ('3ff97da5-9bea-5b88-afc9-f29375eba63e', 'PBM', 'PERRIGO - PARA COMIGO', 'Funcional', NULL, 14),
+  ('882814aa-56fc-54e2-8a17-c1eca0c99f34', 'PBM', 'SANOFI - VIVA', 'Funcional', NULL, 15),
+  ('6e0bcf24-34c5-558a-848f-c07f9277c21c', 'PBM', 'SERVIER - SEMPRE CUIDANDO', 'Funcional', NULL, 16),
+  ('608a4658-ec9e-50a5-a16c-fef430837a22', 'PBM', 'ORIZON CORPORATIVO', 'Orizon', NULL, 17),
+  ('fd71bc71-fbf6-5ccb-9ea9-42c70c0d8250', 'PBM', 'ACHE - CUIDADOS PELA VIDA', 'Portal da Drogaria', NULL, 18),
+  ('03ad96e8-da85-5544-acd1-d7ed2a8cbb8f', 'PBM', 'ASTRAZENECA - FAZ BEM', 'Portal da Drogaria', NULL, 19),
+  ('85f25b23-6d3a-564e-9a0a-0d042843588c', 'PBM', 'BAYER - BAYER PARA VOCÊ', 'Portal da Drogaria', NULL, 20),
+  ('1de288b8-a347-5171-9259-7f04d5cd2791', 'PBM', 'BIOLAB - SAÚDE EM EVOLUÇÃO', 'Portal da Drogaria', NULL, 21),
+  ('b37ce377-4ad2-5d7a-99e0-ad6ef915d345', 'PBM', 'BOEHRINGER - ABRAÇAR A VIDA', 'Portal da Drogaria', NULL, 22),
+  ('f186fb22-efd8-50b8-9a93-adf8c55063ed', 'PBM', 'EMS - EMS SAÚDE', 'Portal da Drogaria', NULL, 23),
+  ('d66aaad4-4011-5f28-b146-e9256bf72da6', 'PBM', 'EMS - PROGRAMA + OFTA', 'Portal da Drogaria', NULL, 24),
+  ('9c58dd1d-3f55-5feb-96ce-e1dbc11ff993', 'PBM', 'FARMOQUÍMICA - CONSCIÊNCIA PELA VIDA', 'Portal da Drogaria', NULL, 25),
+  ('61aa75fb-4b29-5bae-a98f-069f14791eb4', 'PBM', 'GERMED - ABRACE-ME', 'Portal da Drogaria', NULL, 26),
+  ('5d64bb4d-3257-52c6-8b6d-d55f84925d76', 'PBM', 'GSK - VIVER MAIS', 'Portal da Drogaria', NULL, 27),
+  ('35d838e5-9d97-52cf-89a6-d3b252b85b37', 'PBM', 'HYPERA - MANTECORP SAÚDE - FÁCIL', 'Portal da Drogaria', NULL, 28),
+  ('28362fb2-d8de-5a82-94a1-0b0a9dc3518b', 'PBM', 'LILLY - LILLY MELHOR PARA VOCÊ', 'Portal da Drogaria', NULL, 29),
+  ('1df93384-d214-5724-97fc-5517c0479a3a', 'PBM', 'NOVARTIS - VALE MAIS SAÚDE', 'Portal da Drogaria', NULL, 30),
+  ('ad95f370-2143-5150-a940-42557356880f', 'PBM', 'PFIZER - MAIS PFIZER', 'Portal da Drogaria', NULL, 31),
+  ('18bd8775-b047-55d4-9c78-cacfa6b732d7', 'PBM', 'THERAMEX - INTIMAMENTE BEM', 'Portal da Drogaria', NULL, 32),
+  ('728ce0f5-0931-50b4-8dcb-29526d7188a4', 'PBM', 'UNITEDMED - CAMINHANDO JUNTOS', 'Portal da Drogaria', NULL, 33),
+  ('d88175f3-37e8-5c2c-8240-f56a2a572d27', 'PBM', 'VIATRIS - SE CUIDA', 'Portal da Drogaria', NULL, 34),
+  ('7ab5cb9f-6709-5552-a3e1-b1422e3dca1a', 'PBM', 'VIDALINK', 'Vidalink', NULL, 35),
+  ('33f7af95-f8ad-5353-85fd-a48166fe56c0', 'STRATEGY', 'Foco dermocosméticos', NULL, 'Mix e exposição de dermocosméticos', 0),
+  ('81dc5e07-10e9-5131-b2fa-78beb2b2a26b', 'STRATEGY', 'Expansão de horário', NULL, 'Abrir mais horas ou dias · usada no módulo Escala', 1),
+  ('c1a749d7-dcff-5002-aced-bf2a90883f4e', 'STRATEGY', 'Loja de bairro', NULL, 'Atendimento de proximidade', 2),
+  ('851daafc-2e32-57c9-a303-838e75315386', 'STRATEGY', 'Referência em genéricos', NULL, 'Preço e mix de genéricos', 3),
+  ('f2e7427e-3b37-507e-a768-9aaedb2f85e1', 'STRATEGY', 'Delivery próprio', NULL, 'Entrega com equipe da loja', 4),
+  ('88643d3e-9231-54f3-b2de-88474fad155f', 'STRATEGY', 'Farmácia clínica', NULL, 'Serviços farmacêuticos', 5),
+  ('49959858-bb4a-5f97-a337-3ee1b59d82ac', 'FURNITURE', 'Gôndolas', 'gondola', 'Corredores de autosserviço', 0),
+  ('e1d79488-1a5d-5e91-8404-467fbce82af2', 'FURNITURE', 'Ponta de gôndola', 'gondola', 'Cabeceira de corredor para destaque de marca', 1),
+  ('d403c038-7c59-53eb-a390-aaad0f3ca8b1', 'FURNITURE', 'Check-outs', 'checkout', 'Caixas com PDV', 2),
+  ('395c7248-e636-5b38-947d-8ca9ea5a6066', 'FURNITURE', 'Display de check-out', 'checkout', 'Expositor de impulso junto ao caixa', 3),
+  ('96c24826-0df4-5d70-9aa0-ad12cc49dc89', 'FURNITURE', 'Balcões de atendimento', 'balcao', 'Atendimento farmacêutico e de medicamentos', 4),
+  ('77de4ef9-8b3b-5fe7-854c-d894323df19d', 'FURNITURE', 'Expositor de balcão', 'balcao', 'Display pequeno sobre o balcão', 5),
+  ('27a5e8d4-f378-5ce3-8de7-3c6d0b171060', 'FURNITURE', 'Geladeira de termolábeis', 'frio', 'Medicamentos refrigerados, 2 °C a 8 °C', 6),
+  ('cd381a1f-556a-502a-a3f6-a6be43617954', 'FURNITURE', 'Vitrine refrigerada', 'frio', 'Bebidas e itens de conveniência', 7),
+  ('6608a928-e282-5127-b374-655ff75481b5', 'FURNITURE', 'Expositores de dermocosméticos', 'expositor', 'Ilhas e torres de marca', 8),
+  ('cb71a545-69ca-5c45-ae58-9ce42f82ba19', 'FURNITURE', 'Ilha promocional', 'expositor', 'Ponto extra no salão para campanhas', 9),
+  ('4d71af9d-bd15-5c3d-ba8b-ea90f199d418', 'FURNITURE', 'Sala de serviços farmacêuticos', 'sala', 'Aferição e aplicação', 10),
+  ('c45bc928-4ac8-55f8-84cf-4195d0f70066', 'FURNITURE', 'Totem digital', 'outro', 'Tela para mídia e campanhas no PDV', 11)
+ON CONFLICT DO NOTHING;
+
+UPDATE stores SET own_building = true, area_m2 = 240, sales_area_m2 = 180, staff_count = 11,
+  demand_system_id = '599efd00-f522-53eb-99fd-f5eb2e422867'
+WHERE id = '4672337f-b1c1-59a3-a7b6-1540179a02a7' AND area_m2 IS NULL;
+
+INSERT INTO store_opening_hours (id, store_id, day, is_open, opens_at, closes_at, is_24h, is_on_call) VALUES
+  ('c4763ecb-e004-53cf-bd9d-9bda48e23f48', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'MON', true, '08:00', '20:00', false, false),
+  ('11397ed2-6f8d-5399-9424-288005c5a1c7', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'TUE', true, '08:00', '20:00', false, false),
+  ('b7b598f6-af2d-5b5f-9c72-3a959f0b6372', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'WED', true, '08:00', '20:00', false, false),
+  ('0ea09b9d-3096-5593-aec9-71ca63392916', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'THU', true, '08:00', '20:00', false, false),
+  ('2115379c-cdc6-5b52-9a5e-683aeadf289b', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'FRI', true, '08:00', '20:00', false, false),
+  ('94b4909b-1999-5644-9f22-7099e0b41c7b', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'SAT', true, '08:00', '20:00', false, false),
+  ('f7ad00ca-1b90-5d74-af75-f222f3b085b1', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'SUN', false, NULL, NULL, false, true),
+  ('f74b6f30-94c7-510f-80ca-b1eac93578cd', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'HOLIDAY', true, '09:00', '15:00', false, false)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO store_catalog_entries (id, store_id, catalog_item_id, quantity, trade_quantity, since, updated_at) VALUES
+  ('905be029-9535-5c3a-8c13-8e249e1e4aab', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '98aab3c3-872e-541b-97ca-beebeb6d7480', NULL, NULL, NULL, now()),
+  ('aa9cc344-56bb-5d7e-bd7c-896dda6aece7', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'adb5324d-100a-5526-ae56-95dfb90b113c', NULL, NULL, NULL, now()),
+  ('7864a64a-b301-5035-a41c-e72b5f38c8e3', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'bc7c7521-3b76-549d-8fdf-fcbaeb5c9294', NULL, NULL, NULL, now()),
+  ('28b5abc7-590f-5d9c-b92f-18bb90eb8729', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '828e8986-407c-586f-8807-08833784070d', NULL, NULL, NULL, now()),
+  ('39630205-b542-519d-8261-503685146104', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '18441a9f-8992-55a6-a94b-455cf995960b', NULL, NULL, NULL, now()),
+  ('6809363e-afb3-5f4f-b590-19de2a4dc948', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '16677dff-5649-5893-9023-7479a9d88bca', NULL, NULL, NULL, now()),
+  ('4bfdc1e1-aec3-5ba5-8bcf-40b3c54ee69a', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'f60f1f0e-ae81-56bd-b8c3-c2452d6f5fed', NULL, NULL, NULL, now()),
+  ('4364ac91-5eb4-5fde-9bf8-65877a1c806f', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '73c382b1-f5cb-5ef7-abc4-eec01892044f', NULL, NULL, NULL, now()),
+  ('60ee933e-ebc3-529a-9504-1e5ed3f2085e', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '6a61a2c1-eff4-52c2-a311-04dc87c5d103', NULL, NULL, NULL, now()),
+  ('17ba2f49-5ae3-5bf3-8479-3bf54587c1f6', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'b843b172-0929-5ae3-824e-3dc80abb6733', NULL, NULL, NULL, now()),
+  ('cc83121e-3a6e-51f1-a028-39d5bc99f03d', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'd9af4691-0c3e-5625-83e7-498d5825f8c6', NULL, NULL, NULL, now()),
+  ('d3334a82-dace-5d8f-a231-9de4a6f73f59', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '882814aa-56fc-54e2-8a17-c1eca0c99f34', NULL, NULL, NULL, now()),
+  ('1bb070f6-118e-5feb-8e96-5aac51da303a', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'fd71bc71-fbf6-5ccb-9ea9-42c70c0d8250', NULL, NULL, NULL, now()),
+  ('ee9fdb4e-f933-59c1-b2fe-4452a77e2bf8', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'f186fb22-efd8-50b8-9a93-adf8c55063ed', NULL, NULL, NULL, now()),
+  ('a16a843b-7e62-5db9-9256-517af4e82f9c', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '1df93384-d214-5724-97fc-5517c0479a3a', NULL, NULL, NULL, now()),
+  ('f77f81d1-64b2-522c-824d-dc7a2af8d0b7', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'ad95f370-2143-5150-a940-42557356880f', NULL, NULL, NULL, now()),
+  ('5ddfa5a5-97b9-5545-89de-b7df2ba1cd94', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '7ab5cb9f-6709-5552-a3e1-b1422e3dca1a', NULL, NULL, NULL, now()),
+  ('1457c50d-03fd-5e6f-ab2b-c318eb990471', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '33f7af95-f8ad-5353-85fd-a48166fe56c0', NULL, NULL, '2024-03-10', now()),
+  ('6bc1b4c6-d93b-5c34-9b03-cd44e368c576', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '81dc5e07-10e9-5131-b2fa-78beb2b2a26b', NULL, NULL, '2026-06-01', now()),
+  ('d3bffed7-1d0c-506e-8c8d-b2502f6fa337', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'c1a749d7-dcff-5002-aced-bf2a90883f4e', NULL, NULL, '2018-04-12', now()),
+  ('0b69976a-f1b1-5c67-904a-00f2d693d2f1', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '49959858-bb4a-5f97-a337-3ee1b59d82ac', 14, 4, NULL, now()),
+  ('1eebcfb7-4719-594b-8775-adce04c83668', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'd403c038-7c59-53eb-a390-aaad0f3ca8b1', 3, 2, NULL, now()),
+  ('46a1a6cb-f0f4-55b6-b9ee-765339bfe001', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '96c24826-0df4-5d70-9aa0-ad12cc49dc89', 4, 0, NULL, now()),
+  ('3463c71e-1b55-53af-977b-655868d1e7b9', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '27a5e8d4-f378-5ce3-8de7-3c6d0b171060', 1, 0, NULL, now()),
+  ('af1591bf-a9c9-56f0-8ffd-786500db588a', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '6608a928-e282-5127-b374-655ff75481b5', 2, 2, NULL, now()),
+  ('17b7161e-bf90-5ad3-b871-367caa598726', '4672337f-b1c1-59a3-a7b6-1540179a02a7', '4d71af9d-bd15-5c3d-ba8b-ea90f199d418', 1, 0, NULL, now())
+ON CONFLICT DO NOTHING;
+
+INSERT INTO store_free_sections (id, store_id, title, created_by) VALUES ('6a56e6b0-ff29-53e6-bb9d-2c3f272dba02', '4672337f-b1c1-59a3-a7b6-1540179a02a7', 'Observações da visita', 'OP-03') ON CONFLICT DO NOTHING;
+INSERT INTO store_free_fields (id, section_id, label, value, sort) VALUES
+  ('514abca0-51b1-595c-99f9-33e5e00bf15d', '6a56e6b0-ff29-53e6-bb9d-2c3f272dba02', 'Última visita do anjo', '14/10/2026 · Juliana Prado', 0),
+  ('29627743-29b7-5910-b8ff-ba659670396a', '6a56e6b0-ff29-53e6-bb9d-2c3f272dba02', 'Ponto de atenção', 'Fachada com iluminação queimada no lado da Av. Cruzeiro do Sul', 1)
+ON CONFLICT DO NOTHING;
+
+COMMIT;

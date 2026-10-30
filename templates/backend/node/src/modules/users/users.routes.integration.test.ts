@@ -2,14 +2,17 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { app } from '../../app.js';
 import { prisma } from '../../shared/database/prisma.js';
+import { ownerDb } from '../../test-support/owner-db.js';
 
 describe('users routes', () => {
   beforeEach(async () => {
-    await prisma.user.deleteMany();
+    // Limpeza com o dono do banco: o usuário da aplicação não tem DELETE.
+    await ownerDb.user.deleteMany();
   });
 
   afterAll(async () => {
     await prisma.$disconnect();
+    await ownerDb.$disconnect();
   });
 
   it('deve criar usuário quando dados são válidos', async () => {

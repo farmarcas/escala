@@ -1,0 +1,75 @@
+import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { buildQuery, type Paginated } from '@/lib/api';
+import { useApiQuery } from '@/hooks/useApiQuery';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import type { Store, StoreStats } from '../types';
+
+const PAGE_SIZE = 20;
+
+export type StoresFilter = {
+  search: string;
+  brandId: string;
+  uf: string;
+  type: string;
+  status: string;
+  completeness: string;
+  validation: string;
+  hasOpenRequest: string;
+};
+
+const INITIAL: StoresFilter = {
+  search: '',
+  brandId: '',
+  uf: '',
+  type: '',
+  status: '',
+  completeness: '',
+  validation: '',
+  hasOpenRequest: '',
+};
+
+// Links da Visão geral chegam com filtro na URL (?validacao=attention, ?status=PENDING, ?solicitacao=1).
+function initialFilter(params: URLSearchParams): StoresFilter {
+  return {
+    ...INITIAL,
+    validation: params.get('validacao') ?? '',
+    status: params.get('status') ?? '',
+    hasOpenRequest: params.get('solicitacao') ? 'true' : '',
+  };
+}
+
+export function useStores() {
+  const [params] = useSearchParams();
+  const [filter, setFilter] = useState<StoresFilter>(() => initialFilter(params));
+  const [page, setPage] = useState(1);
+  const search = useDebouncedValue(filter.search.trim());
+
+  const list = useApiQuery<Paginated<Store>>(
+    `/stores${buildQuery({ ...filter, search, page, pageSize: PAGE_SIZE })}`,
+  );
+  const stats = useApiQuery<StoreStats>('/stores/stats');
+
+  return {
+    filter,
+    updateFilter: (patch: Partial<StoresFilter>) => {
+      setFilter((current) => ({ ...current, ...patch }));
+      setPage(1);
+    },
+    clearFilters: () => {
+      setFilter(INITIAL);
+      setPage(1);
+    },
+    hasFilters: Object.values(filter).some((value) => value !== ''),
+    setPage,
+    stores: list.data?.data ?? [],
+    meta: list.data?.meta,
+    isLoading: list.isLoading && !list.data,
+    error: list.error,
+    stats: stats.data,
+    reload: () => {
+      list.reload();
+      stats.reload();
+    },
+  };
+}
