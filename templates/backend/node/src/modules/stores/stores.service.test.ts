@@ -29,6 +29,7 @@ const store = (overrides: Partial<StoreRecord> = {}): StoreRecord => ({
   groupName: 'Grupo Aurora Norte',
   brand: { id: input.brandId, name: 'Rede Aurora', status: 'ACTIVE' },
   name: input.name,
+  legalName: null,
   type: 'PDV',
   cnpj: input.cnpj,
   street: input.street,
@@ -116,20 +117,30 @@ describe('stores service · updateStatus', () => {
   it('deve auditar a ativação no grupo da loja', async () => {
     const repo = makeRepo();
 
-    await makeStoresService(repo).updateStatus(admin, 's1', { status: 'ACTIVE' });
+    await makeStoresService(repo).updateStatus(admin, 's1', {
+      status: 'ACTIVE',
+      justification: 'Loja inaugurada',
+    });
 
     expect(repo.updateStatus).toHaveBeenCalledWith(
       admin,
       's1',
       'ACTIVE',
-      expect.objectContaining({ economicGroupId: 'g1', action: 'STORE_ACTIVATED' }),
+      expect.objectContaining({
+        economicGroupId: 'g1',
+        action: 'STORE_ACTIVATED',
+        justification: 'Loja inaugurada',
+      }),
     );
   });
 
   it('não deve gravar quando o status já é o pedido', async () => {
     const repo = makeRepo({ findById: vi.fn().mockResolvedValue(store({ status: 'ACTIVE' })) });
 
-    await makeStoresService(repo).updateStatus(admin, 's1', { status: 'ACTIVE' });
+    await makeStoresService(repo).updateStatus(admin, 's1', {
+      status: 'ACTIVE',
+      justification: 'Loja inaugurada',
+    });
 
     expect(repo.updateStatus).not.toHaveBeenCalled();
   });

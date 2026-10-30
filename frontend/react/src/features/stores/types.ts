@@ -8,6 +8,7 @@ export type Store = {
   groupName: string;
   brand: { id: string; name: string; status: 'ACTIVE' | 'HISTORICAL' };
   name: string;
+  legalName: string | null;
   type: StoreType;
   cnpj: string;
   street: string;
@@ -19,7 +20,8 @@ export type Store = {
   openedAt: string | null;
   status: StoreStatus;
   createdAt: string;
-  completeness: { filled: number; total: number };
+  // missing: campos vazios (vem na lista da rede).
+  completeness: { filled: number; total: number; missing?: string[] };
   validation: {
     status: 'never' | 'ok' | 'due_soon' | 'overdue';
     validatedAt: string | null;
@@ -38,6 +40,7 @@ export type StoreStats = {
   inactive: number;
   groups: number;
   avgCompleteness: number;
+  completenessBands: { complete: number; partial: number; low: number };
   validationAttention: number;
   docAlerts: { docs: number; stores: number };
   openRequests: { requests: number; stores: number };

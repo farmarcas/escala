@@ -12,13 +12,20 @@ type KpiCardProps = {
   isWarning?: boolean;
   isLoading?: boolean;
   // Barra de progresso sob o número (0–100).
-  progress?: { percent: number; tone: 'success' | 'primary' | 'info' | 'neutral' | 'danger' };
+  progress?: {
+    percent: number;
+    tone: 'success' | 'warning' | 'primary' | 'info' | 'neutral' | 'danger';
+  };
   // Indicador que ainda não tem dados: número apagado e o aviso do que falta no contexto.
   isUnavailable?: boolean;
+  // Card clicável (ex.: filtra a lista pelo alerta); isSelected marca o filtro ligado.
+  onClick?: () => void;
+  isSelected?: boolean;
 };
 
 const progressTone = {
   success: 'bg-success',
+  warning: 'bg-warning',
   primary: 'bg-primary',
   info: 'bg-info-text',
   neutral: 'bg-control',
@@ -35,12 +42,18 @@ export function KpiCard({
   isLoading = false,
   progress,
   isUnavailable = false,
+  onClick,
+  isSelected = false,
 }: KpiCardProps) {
+  const Element = onClick ? 'button' : 'div';
   return (
-    <div
+    <Element
+      {...(onClick ? { type: 'button' as const, onClick, 'aria-pressed': isSelected } : {})}
       className={cn(
-        'rounded-lg border bg-surface p-5 shadow-card',
-        isCritical ? 'border-destructive' : 'border-border',
+        'rounded-lg border bg-surface p-5 text-left shadow-card',
+        isSelected ? 'border-primary' : isCritical ? 'border-destructive' : 'border-border',
+        onClick &&
+          'cursor-pointer transition-colors duration-150 hover:border-primary focus-visible:outline-2 focus-visible:outline-ring',
       )}
     >
       <p
@@ -82,7 +95,7 @@ export function KpiCard({
         />
       )}
       <div className="mt-2 text-xs text-muted-foreground">{context}</div>
-    </div>
+    </Element>
   );
 }
 

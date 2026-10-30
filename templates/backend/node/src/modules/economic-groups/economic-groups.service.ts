@@ -229,8 +229,16 @@ export const makeEconomicGroupsService = (repo: EconomicGroupsRepository) => {
     async update(actor: PlatformIdentity, number: number, input: UpdateGroupInput) {
       const current = await requireGroup(actor, number);
       const { owner, ...fields } = input;
+      // Trocar a pessoa dona é transferência de titularidade (com justificativa), não edição:
+      // senão a nova pessoa herdaria o código F-xxxx da anterior.
+      if (owner && current.owner) {
+        throw new ConflictError(
+          'O grupo já tem proprietário. Para trocar, use Transferir titularidade (em desenvolvimento).',
+          'OWNER_TRANSFER_REQUIRED',
+        );
+      }
       const ownerWrite: OwnerWrite | undefined = owner
-        ? { ...owner, ...(current.owner ? {} : { pseudonym: generatePseudonym() }) }
+        ? { ...owner, pseudonym: generatePseudonym() }
         : undefined;
       const changed = (Object.keys(input) as (keyof UpdateGroupInput)[])
         .filter((key) => input[key] !== undefined)

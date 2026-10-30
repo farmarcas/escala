@@ -18,7 +18,7 @@ export function GroupDetailPage() {
         key={number}
         number={number}
         canEdit={isAdmin}
-        renderStores={({ group, canEdit, onChanged }) => (
+        renderStores={({ group, canEdit, onChanged, isAddingStore, setIsAddingStore }) => (
           <GroupStoresPanel
             group={{
               number: group.number,
@@ -30,6 +30,8 @@ export function GroupDetailPage() {
             }}
             canEdit={canEdit}
             onChanged={onChanged}
+            isFormOpen={isAddingStore}
+            onFormOpenChange={setIsAddingStore}
           />
         )}
         renderAudit={({ group }) => <AuditTrail key={group.updatedAt} groupNumber={group.number} />}

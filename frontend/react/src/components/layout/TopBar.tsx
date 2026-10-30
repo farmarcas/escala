@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { PanelLeft } from 'lucide-react';
+import { usePageTitleValue } from './PageTitle';
 
 export type Crumb = { label: string; to?: string };
 
@@ -19,6 +20,13 @@ export function TopBar({
   isRailCollapsed,
   onToggleRail,
 }: TopBarProps) {
+  // Na tela de detalhe, o último item mostra o nome (ex.: "Grupo Aurora Norte") em vez do código.
+  const pageTitle = usePageTitleValue();
+  const items = pageTitle
+    ? crumbs.map((crumb, index) =>
+        index === crumbs.length - 1 ? { ...crumb, label: pageTitle } : crumb,
+      )
+    : crumbs;
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-border bg-surface px-4 md:px-10">
       {/* Recolher e expandir o menu lateral, à esquerda do caminho (protótipo). */}
@@ -33,8 +41,8 @@ export function TopBar({
       </button>
       <nav aria-label="Você está em" className="min-w-0 flex-1">
         <ol className="flex min-w-0 items-center gap-2 text-sm">
-          {crumbs.map((crumb, index) => {
-            const isLast = index === crumbs.length - 1;
+          {items.map((crumb, index) => {
+            const isLast = index === items.length - 1;
             return (
               <li key={`${crumb.label}-${index}`} className="flex min-w-0 items-center gap-2">
                 {index > 0 && (

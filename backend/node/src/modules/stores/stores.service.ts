@@ -20,6 +20,7 @@ export type StoreRecord = {
   groupName: string;
   brand: { id: string; name: string; status: 'ACTIVE' | 'HISTORICAL' };
   name: string;
+  legalName: string | null;
   type: StoreTypeValue;
   cnpj: string;
   street: string;
@@ -31,7 +32,7 @@ export type StoreRecord = {
   openedAt: string | null;
   status: StoreStatusValue;
   createdAt: Date;
-  completeness: { filled: number; total: number };
+  completeness: { filled: number; total: number; missing?: string[] };
   validation: { status: ValidationStatus; validatedAt: Date | null; days: number | null };
   docAlerts: number;
   openRequests: number;
@@ -47,6 +48,7 @@ export type StoreStats = {
   groups: number;
   // Governança (spec 002, US4).
   avgCompleteness: number;
+  completenessBands: { complete: number; partial: number; low: number };
   validationAttention: number;
   docAlerts: { docs: number; stores: number };
   openRequests: { requests: number; stores: number };
@@ -149,11 +151,18 @@ export const makeStoresService = (repo: StoresRepository) => ({
     if (store.status === input.status) return store;
 
     const group = await repo.findGroup(actor, store.groupNumber);
+    if (group?.status === 'ARCHIVED') {
+      throw new ConflictError(
+        'Loja de grupo arquivado não muda de status. Restaure o grupo antes.',
+        'GROUP_ARCHIVED',
+      );
+    }
     const activating = input.status === 'ACTIVE';
     return repo.updateStatus(actor, id, input.status, {
       economicGroupId: group?.id ?? null,
       action: activating ? 'STORE_ACTIVATED' : 'STORE_DEACTIVATED',
       summary: `Loja ${formatStoreCode(store.code)} · ${store.name} ${activating ? 'ativada' : 'inativada'}`,
+      justification: input.justification,
     });
   },
 });

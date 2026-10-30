@@ -37,8 +37,8 @@ export function useGroupStores(groupNumber: number, onChanged: () => void) {
   );
 
   const setStatus = useCallback(
-    async (id: string, status: 'ACTIVE' | 'INACTIVE') => {
-      await api.patch<Store>(`/stores/${id}/status`, { status });
+    async (id: string, status: 'ACTIVE' | 'INACTIVE', justification: string) => {
+      await api.patch<Store>(`/stores/${id}/status`, { status, justification });
       reload();
       onChanged();
     },

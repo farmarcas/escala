@@ -11,13 +11,20 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/States';
 import { Cell, HeaderCell, Row, Table, TableFooter } from '@/components/ui/Table';
 import { useBrandOptions } from '@/hooks/useBrandOptions';
-import { formatCnpj, formatGroupNumber, formatNumber, formatStoreCode } from '@/lib/format';
+import {
+  formatCnpj,
+  formatGroupNumber,
+  formatNumber,
+  formatStoreCode,
+  pluralize,
+} from '@/lib/format';
 import { UF_OPTIONS } from '@/lib/uf';
 import { useStores } from '../hooks/useStores';
 import { STORE_STATUS, STORE_TYPE } from '../storeLabels';
+import { CompletenessDonut } from './CompletenessDonut';
 
-const percent = (part: number, total: number) =>
-  total === 0 ? '0%' : `${Math.round((part / total) * 100)}%`;
+const share = (part: number, total: number) => (total === 0 ? 0 : (part / total) * 100);
+const percent = (part: number, total: number) => `${Math.round(share(part, total))}%`;
 
 export function StoresView() {
   const navigate = useNavigate();
@@ -36,41 +43,60 @@ export function StoresView() {
         }
       />
 
-      <KpiGrid>
+      {/* Quatro indicadores e a rosca do preenchimento, que precisa de mais largura. */}
+      <KpiGrid className="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(4,minmax(0,1fr))_minmax(300px,1.4fr)]">
         <KpiCard
           label="Lojas na rede"
           value={formatNumber(stats?.total ?? 0)}
-          context={`${formatNumber(stats?.pdv ?? 0)} PDV · ${formatNumber(stats?.cd ?? 0)} CD · ${percent(stats?.active ?? 0, stats?.total ?? 0)} ativas`}
-          isLoading={!stats}
-        />
-        <KpiCard
-          label="Preenchimento do cadastro"
-          value={`${stats?.avgCompleteness ?? 0}%`}
-          suffix="média"
-          context="Campos que o grupo preenche, incluindo documentos"
+          suffix={`${formatNumber(stats?.pdv ?? 0)} PDV · ${formatNumber(stats?.cd ?? 0)} CD`}
+          progress={{ percent: share(stats?.active ?? 0, stats?.total ?? 0), tone: 'success' }}
+          context={`${formatNumber(stats?.active ?? 0)} ativas (${percent(stats?.active ?? 0, stats?.total ?? 0)})`}
           isLoading={!stats}
         />
         <KpiCard
           label="Validação pendente"
           value={formatNumber(stats?.validationAttention ?? 0)}
           suffix={`de ${formatNumber(stats?.total ?? 0)}`}
+          progress={{
+            percent: share(stats?.validationAttention ?? 0, stats?.total ?? 0),
+            tone: 'warning',
+          }}
           context="Vencida ou nunca feita pelo grupo (a cada 6 meses)"
-          isCritical={(stats?.validationAttention ?? 0) > 0}
+          isWarning={(stats?.validationAttention ?? 0) > 0}
           isLoading={!stats}
+          onClick={() => list.toggleFilter('validation', 'attention')}
+          isSelected={list.filter.validation === 'attention'}
         />
         <KpiCard
           label="Documentos com alerta"
           value={formatNumber(stats?.docAlerts.docs ?? 0)}
-          suffix={`em ${formatNumber(stats?.docAlerts.stores ?? 0)} lojas`}
+          suffix={`em ${pluralize(stats?.docAlerts.stores ?? 0, 'loja', 'lojas')}`}
+          progress={{
+            percent: share(stats?.docAlerts.stores ?? 0, stats?.total ?? 0),
+            tone: 'danger',
+          }}
           context="Vencidos ou vencendo em até 30 dias"
           isLoading={!stats}
+          onClick={() => list.toggleFilter('docAlert', 'true')}
+          isSelected={list.filter.docAlert === 'true'}
         />
         <KpiCard
           label="Solicitações em andamento"
           value={formatNumber(stats?.openRequests.requests ?? 0)}
-          suffix={`em ${formatNumber(stats?.openRequests.stores ?? 0)} lojas`}
+          suffix={`em ${pluralize(stats?.openRequests.stores ?? 0, 'loja', 'lojas')}`}
+          progress={{
+            percent: share(stats?.openRequests.stores ?? 0, stats?.total ?? 0),
+            tone: 'info',
+          }}
           context="CNPJ, endereço, bandeira e regime"
           isLoading={!stats}
+          onClick={() => list.toggleFilter('hasOpenRequest', 'true')}
+          isSelected={list.filter.hasOpenRequest === 'true'}
+        />
+        <CompletenessDonut
+          stats={stats}
+          selected={list.filter.completeness}
+          onSelect={(band) => list.toggleFilter('completeness', band)}
         />
       </KpiGrid>
 
@@ -149,12 +175,25 @@ export function StoresView() {
           />
           <SelectField
             isLabelInline
-            label="Filtrar por solicitação"
-            placeholder="Todas"
-            options={[{ value: 'true', label: 'Com solicitação em andamento' }]}
-            value={list.filter.hasOpenRequest}
-            onChange={(event) => list.updateFilter({ hasOpenRequest: event.target.value })}
+            label="Filtrar por alerta"
+            placeholder="Todos"
+            options={[
+              { value: 'doc', label: 'Documento vencido ou a vencer' },
+              { value: 'request', label: 'Solicitação em andamento' },
+            ]}
+            value={list.filter.docAlert ? 'doc' : list.filter.hasOpenRequest ? 'request' : ''}
+            onChange={(event) =>
+              list.updateFilter({
+                docAlert: event.target.value === 'doc' ? 'true' : '',
+                hasOpenRequest: event.target.value === 'request' ? 'true' : '',
+              })
+            }
           />
+          {list.hasFilters && (
+            <Button variant="link" size="sm" onClick={list.clearFilters}>
+              Limpar filtros
+            </Button>
+          )}
         </div>
 
         {list.isLoading && <LoadingState label="Carregando lojas" />}
@@ -216,8 +255,13 @@ export function StoresView() {
                       </p>
                     </Cell>
                     <Cell>{store.brand.name}</Cell>
-                    <Cell>
-                      <p className="font-semibold">{store.name}</p>
+                    <Cell className="max-w-72">
+                      <p className="truncate font-semibold">{store.name}</p>
+                      {store.legalName && (
+                        <p className="truncate text-xs text-secondary-foreground">
+                          {store.legalName}
+                        </p>
+                      )}
                       <p className="font-mono text-xs text-muted-foreground">
                         {formatStoreCode(store.code)}
                       </p>

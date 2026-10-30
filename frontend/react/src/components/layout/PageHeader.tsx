@@ -6,8 +6,9 @@ export function PageHeader({ title, description, actions }: PageHeaderProps) {
   return (
     <div className="flex flex-wrap items-end gap-4 md:gap-6">
       <div className="min-w-0 flex-1 basis-80">
-        <h1 className="text-2xl font-bold tracking-[-0.3px]">{title}</h1>
-        {description && <div className="mt-1.5 text-sm text-muted-foreground">{description}</div>}
+        {/* O nome da tela já está no caminho da barra superior; o título fica só para leitor de tela. */}
+        <h1 className="sr-only">{title}</h1>
+        {description && <div className="text-sm text-muted-foreground">{description}</div>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>

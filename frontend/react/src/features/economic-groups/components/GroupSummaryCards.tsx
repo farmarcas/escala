@@ -21,10 +21,21 @@ function OwnerCard({ group }: GroupSummaryCardsProps) {
         </div>
       )}
       {owner && !owner.name && (
-        <div className="mt-3">
-          <p className="font-mono text-lg font-semibold">{owner.pseudonym}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Departamento Sócio · dados pessoais pseudonimizados para o analista
+        <div className="mt-3 flex flex-col gap-3">
+          <div>
+            <p className="font-mono text-lg font-semibold">{owner.pseudonym}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Departamento Sócio · primeiro administrador
+            </p>
+          </div>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[13px]">
+            <dt className="text-muted-foreground">E-mail</dt>
+            <dd className="text-muted-foreground">Pseudonimizado</dd>
+            <dt className="text-muted-foreground">Telefone</dt>
+            <dd className="text-muted-foreground">Pseudonimizado</dd>
+          </dl>
+          <p className="text-xs text-muted-foreground">
+            Dados pessoais visíveis só para o Administrador da plataforma.
           </p>
         </div>
       )}

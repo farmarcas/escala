@@ -24,6 +24,7 @@ export function BrandsKpis({ stats }: BrandsKpisProps) {
         label="Marcas sem loja"
         value={formatNumber(stats?.withoutStores ?? 0)}
         context="Ativas e sem nenhuma loja vinculada"
+        isWarning
         isLoading={isLoading}
       />
     </KpiGrid>

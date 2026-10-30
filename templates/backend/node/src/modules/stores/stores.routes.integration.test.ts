@@ -119,19 +119,80 @@ describe('stores routes', () => {
     });
   });
 
-  it('deve inativar loja e responder 404 para loja inexistente', async () => {
-    const store = await createStore(groupId, brandId, 1);
+  it('deve filtrar por documento com alerta e contar lojas por nível de preenchimento', async () => {
+    const withDoc = await createStore(groupId, brandId, 1);
+    await createStore(groupId, brandId, 2);
+    await ownerDb.storeDocument.create({
+      data: {
+        storeId: withDoc.id,
+        economicGroupId: groupId,
+        docType: 'SANITARY_LICENSE',
+        fileName: 'crf.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 10,
+        validUntil: new Date('2020-01-01T00:00:00.000Z'),
+        uploadedByKind: 'PLATFORM',
+        uploadedBy: 'OP-02',
+      },
+    });
 
-    const updated = await request(app)
+    const list = await request(app).get(STORES).query({ docAlert: 'true' });
+    const stats = await request(app).get(`${STORES}/stats`);
+
+    expect(list.body.data.map((store: { code: number }) => store.code)).toEqual([1]);
+    expect(list.body.data[0].completeness.missing.length).toBeGreaterThan(0);
+    expect(stats.body.completenessBands).toEqual({ complete: 0, partial: 0, low: 2 });
+  });
+
+  it('deve inativar loja com justificativa e responder 404 para loja inexistente', async () => {
+    const store = await createStore(groupId, brandId, 1);
+    const body = { status: 'INACTIVE', justification: 'Loja fechada para reforma' };
+
+    const noReason = await request(app)
       .patch(`${STORES}/${store.id}/status`)
       .set(ADMIN_HEADERS)
       .send({ status: 'INACTIVE' });
+    const updated = await request(app)
+      .patch(`${STORES}/${store.id}/status`)
+      .set(ADMIN_HEADERS)
+      .send(body);
     const missing = await request(app)
       .patch(`${STORES}/00000000-0000-4000-8000-000000000000/status`)
       .set(ADMIN_HEADERS)
-      .send({ status: 'INACTIVE' });
+      .send(body);
 
+    expect(noReason.status).toBe(400);
     expect(updated.body.status).toBe('INACTIVE');
     expect(missing.status).toBe(404);
+    expect(
+      await ownerDb.auditEvent.findFirst({
+        where: { action: 'STORE_DEACTIVATED' },
+        select: { justification: true },
+      }),
+    ).toEqual({ justification: 'Loja fechada para reforma' });
+  });
+
+  it('deve recusar mudar o status de loja de grupo arquivado', async () => {
+    const archived = await createGroup(214, 'Grupo Brisa', { status: 'ARCHIVED' });
+    const store = await createStore(archived.id, brandId, 2);
+
+    const response = await request(app)
+      .patch(`${STORES}/${store.id}/status`)
+      .set(ADMIN_HEADERS)
+      .send({ status: 'INACTIVE', justification: 'Loja fechada para reforma' });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('GROUP_ARCHIVED');
+  });
+
+  it('deve achar a loja por qualquer parte do CNPJ', async () => {
+    const store = await createStore(groupId, brandId, 7);
+
+    const response = await request(app)
+      .get(STORES)
+      .set(ADMIN_HEADERS)
+      .query({ search: store.cnpj.slice(4, 10) });
+
+    expect(response.body.data.map((item: { id: string }) => item.id)).toContain(store.id);
   });
 });

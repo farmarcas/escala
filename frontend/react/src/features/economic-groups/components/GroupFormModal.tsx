@@ -28,6 +28,8 @@ function GroupFormDialog({ group, onClose, onCreate, onUpdate }: GroupFormModalP
   const { run, isPending, error } = useMutation();
   const errors = form.errorsFrom(error);
   const formId = isEdit ? 'group-edit-form' : 'group-new-form';
+  // Quem já é dono não é trocado pela edição: isso é transferência de titularidade.
+  const isOwnerLocked = Boolean(group?.owner);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -104,13 +106,17 @@ function GroupFormDialog({ group, onClose, onCreate, onUpdate }: GroupFormModalP
           </div>
         </fieldset>
 
-        <fieldset className="flex flex-col gap-4 border-t border-border pt-5">
+        <fieldset
+          disabled={isOwnerLocked}
+          className="flex flex-col gap-4 border-t border-border pt-5"
+        >
           <legend className="sr-only">Proprietário</legend>
           <div>
             <p className="text-sm font-semibold">Proprietário</p>
             <p className="text-xs text-muted-foreground">
-              Departamento Sócio · primeiro administrador do grupo. Opcional: sem ele, o grupo fica
-              com o selo “Sem proprietário”.
+              {isOwnerLocked
+                ? 'Para trocar o proprietário, use Transferir titularidade (em desenvolvimento). A troca pede justificativa e gera um novo código para a nova pessoa.'
+                : 'Departamento Sócio · primeiro administrador do grupo. Opcional: sem ele, o grupo fica com o selo “Sem proprietário”.'}
             </p>
           </div>
           <TextField

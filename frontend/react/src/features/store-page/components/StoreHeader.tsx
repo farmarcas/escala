@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, FilePlus2, Pencil } from 'lucide-react';
+import { usePageTitle } from '@/components/layout/PageTitle';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { formatGroupNumber, formatStoreCode } from '@/lib/format';
@@ -24,6 +25,7 @@ export function StoreHeader({
   onNewRequest,
 }: StoreHeaderProps) {
   const status = STORE_STATUS_LABEL[page.status] ?? STORE_STATUS_LABEL.ACTIVE!;
+  usePageTitle(page.basic.name ?? page.receita.legalName ?? undefined);
   const sideText =
     page.side === 'tenant'
       ? 'Visão do grupo'
@@ -41,9 +43,7 @@ export function StoreHeader({
         {backLabel}
       </Link>
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-bold tracking-[-0.3px]">
-          {page.basic.name ?? page.receita.legalName}
-        </h1>
+        <h1 className="sr-only">{page.basic.name ?? page.receita.legalName}</h1>
         <span className="rounded-full border border-border bg-surface px-2.5 py-1 font-mono text-xs font-semibold text-secondary-foreground">
           {formatStoreCode(page.code)}
         </span>

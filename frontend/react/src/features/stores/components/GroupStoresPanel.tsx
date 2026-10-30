@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Clock } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
 import { SearchField } from '@/components/ui/SearchField';
@@ -18,12 +19,21 @@ type GroupStoresPanelProps = {
   group: StoreGroupContext;
   canEdit: boolean;
   onChanged: () => void;
+  // O formulário pode ser aberto de fora (botão no topo da página do grupo).
+  isFormOpen: boolean;
+  onFormOpenChange: (value: boolean) => void;
 };
 
-export function GroupStoresPanel({ group, canEdit, onChanged }: GroupStoresPanelProps) {
+export function GroupStoresPanel({
+  group,
+  canEdit,
+  onChanged,
+  isFormOpen,
+  onFormOpenChange: setIsFormOpen,
+}: GroupStoresPanelProps) {
   const navigate = useNavigate();
   const stores = useGroupStores(group.number, onChanged);
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [addedName, setAddedName] = useState<string | null>(null);
   const canAdd = canEdit && !group.isArchived;
   const isFiltered = stores.type !== 'all' || stores.search !== '';
 
@@ -64,6 +74,25 @@ export function GroupStoresPanel({ group, canEdit, onChanged }: GroupStoresPanel
         )}
       </div>
 
+      {addedName && (
+        <div
+          role="status"
+          className="flex items-start gap-2.5 border-b border-border bg-warning-soft px-5 py-3 text-[13px] text-warning-text"
+        >
+          <Clock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          <span className="flex-1">
+            {addedName} adicionada. O grupo recebeu uma pendência para verificar a loja e completar
+            os dados estratégicos. Até lá a loja aparece como “Pendente no grupo”.
+          </span>
+          <button
+            type="button"
+            onClick={() => setAddedName(null)}
+            className="font-semibold hover:underline"
+          >
+            Fechar
+          </button>
+        </div>
+      )}
       {stores.isLoading && <LoadingState label="Carregando lojas" />}
       {stores.error && !stores.isLoading && (
         <ErrorState message={stores.error.message} onRetry={stores.reload} />
@@ -100,7 +129,17 @@ export function GroupStoresPanel({ group, canEdit, onChanged }: GroupStoresPanel
         <Table label={`Lojas do ${group.name}`} minWidth="1180px">
           <thead>
             <tr>
-              <HeaderCell title="Código oficial ainda a validar com a Farmarcas">Código</HeaderCell>
+              <HeaderCell>
+                <span className="inline-flex items-center gap-1.5">
+                  Código
+                  <span
+                    title="Código oficial da loja: a validar"
+                    className="rounded-sm border border-dashed border-control bg-surface px-1 text-[10px] font-medium normal-case tracking-normal"
+                  >
+                    a validar
+                  </span>
+                </span>
+              </HeaderCell>
               <HeaderCell>Loja</HeaderCell>
               <HeaderCell>Tipo</HeaderCell>
               <HeaderCell>Marca</HeaderCell>
@@ -142,7 +181,7 @@ export function GroupStoresPanel({ group, canEdit, onChanged }: GroupStoresPanel
                   <Cell>
                     <StoreStatusCell
                       store={store}
-                      canEdit={canEdit}
+                      canEdit={canAdd}
                       onSetStatus={stores.setStatus}
                     />
                   </Cell>
@@ -165,7 +204,10 @@ export function GroupStoresPanel({ group, canEdit, onChanged }: GroupStoresPanel
         isOpen={isFormOpen}
         group={group}
         onClose={() => setIsFormOpen(false)}
-        onCreate={stores.create}
+        onCreate={async (input) => {
+          await stores.create(input);
+          setAddedName(input.name);
+        }}
       />
     </>
   );

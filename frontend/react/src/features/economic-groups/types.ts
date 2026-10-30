@@ -72,4 +72,7 @@ export type GroupTabContext = {
   group: GroupDetail;
   canEdit: boolean;
   onChanged: () => void;
+  // "Adicionar loja" também fica no topo da página; a aba de lojas abre o formulário.
+  isAddingStore: boolean;
+  setIsAddingStore: (value: boolean) => void;
 };

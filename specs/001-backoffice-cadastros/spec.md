@@ -134,7 +134,7 @@ Um seletor "Papel de demonstração" no topo alterna entre Administrador da plat
 **Grupos econômicos**
 
 - **FR-020**: O número do GE MUST ser emitido pelo sistema ao salvar (sequencial, exibido com 4 dígitos, sem prefixo), ser único e nunca mudar.
-- **FR-021**: O cadastro do grupo MUST ter nome do grupo, razão social da matriz, CNPJ da matriz e proprietário (nome, e-mail, telefone). O proprietário é opcional. Sem ele, o grupo leva o selo "Sem proprietário".
+- **FR-021**: O cadastro do grupo MUST ter nome do grupo, razão social da matriz, CNPJ da matriz e proprietário (nome, e-mail, telefone). O proprietário é opcional. Sem ele, o grupo leva o selo "Sem proprietário". Depois de cadastrado, o proprietário não é trocado por "Editar grupo" (campos travados): a troca é "Transferir titularidade", que pede justificativa e gera código novo para a nova pessoa (ajuste de 2026-10-30).
 - **FR-022**: O status do grupo MUST ser Ativo, Suspenso ou Arquivado. Grupo novo nasce Ativo.
 - **FR-023**: A lista MUST ter filtro de status com contagem, busca (número, nome, proprietário), filtros por estado e por marca, e colunas GE, grupo (com razão social e selos), proprietário, telefone, lojas (total e PDV/CD), marcas das lojas, estados e status.
 - **FR-024**: Marcas e estados do grupo MUST ser calculados a partir das lojas, não digitados.
@@ -145,7 +145,7 @@ Um seletor "Papel de demonstração" no topo alterna entre Administrador da plat
 - **FR-030**: A loja MUST pertencer a exatamente um grupo e ter nome, tipo (PDV ou CD), CNPJ válido e único, marca ativa, endereço, cidade e UF.
 - **FR-031**: O código da loja MUST ser gerado no cadastro, no formato LJ-NNN.
 - **FR-032**: Loja nova MUST nascer com status "Pendente no grupo". Os status possíveis são Pendente no grupo, Ativa e Inativa.
-- **FR-033**: O administrador MUST poder mudar o status de uma loja entre Ativa e Inativa.
+- **FR-033**: O administrador MUST poder mudar o status de uma loja entre Ativa e Inativa, com confirmação e justificativa escrita (vai para a auditoria do grupo). Loja de grupo arquivado não muda de status. (Ajuste de 2026-10-30.)
 - **FR-034**: MUST existir a lista geral de lojas de todos os grupos, com busca e filtros por marca, UF, tipo e status.
 
 **Ciclo de vida e auditoria**

@@ -82,10 +82,7 @@ export function BrandRow({
           {isActive ? 'Ativa' : 'Histórica'}
         </StatusBadge>
       </Cell>
-      <Cell
-        isNumeric
-        className={cn(brand.storeCount === 0 && isActive && 'font-semibold text-primary-hover')}
-      >
+      <Cell isNumeric className={cn(brand.storeCount === 0 && 'font-semibold text-primary-hover')}>
         {formatNumber(brand.storeCount)}
       </Cell>
       <Cell isNumeric>{formatNumber(brand.groupCount)}</Cell>
@@ -118,6 +115,11 @@ export function BrandRow({
               </Button>
             )}
           </span>
+        )}
+        {toggle.error && (
+          <p role="alert" className="mt-1 text-xs text-destructive-text">
+            {toggle.error.message}
+          </p>
         )}
       </Cell>
     </Row>

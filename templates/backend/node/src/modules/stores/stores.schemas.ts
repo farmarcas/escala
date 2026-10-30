@@ -34,7 +34,13 @@ export const createStoreSchema = z
   .strict();
 export type CreateStoreInput = z.infer<typeof createStoreSchema>;
 
-export const updateStoreSchema = z.object({ status: z.enum(['ACTIVE', 'INACTIVE']) }).strict();
+// Mudar o status da loja pede justificativa, que vai para a auditoria do grupo.
+export const updateStoreSchema = z
+  .object({
+    status: z.enum(['ACTIVE', 'INACTIVE']),
+    justification: z.string().trim().min(5, 'Explique o motivo').max(500),
+  })
+  .strict();
 export type UpdateStoreInput = z.infer<typeof updateStoreSchema>;
 
 const storeFilters = {
@@ -54,6 +60,8 @@ export const listStoresQuery = z
     completeness: z.enum(['complete', 'partial', 'low']).optional(),
     validation: z.enum(['ok', 'due_soon', 'overdue', 'never', 'attention']).optional(),
     hasOpenRequest: z.enum(['true']).optional(),
+    // Documento vencido ou vencendo em até 30 dias.
+    docAlert: z.enum(['true']).optional(),
   })
   .strict();
 export type ListStoresQuery = z.infer<typeof listStoresQuery>;

@@ -307,7 +307,7 @@ A aba **Histórico** junta tudo: edições, solicitações, documentos, validaç
 - **FR-030**: MUST calcular o % de preenchimento sobre a lista fixa de campos da US4 e listar o que falta.
 - **FR-031**: MUST registrar a validação semestral feita pelo grupo (só com 100%), com vencimento em 6 meses.
 - **FR-032**: A Farmarcas MUST poder registrar uma cobrança de validação, e o grupo MUST ver que foi cobrado.
-- **FR-033**: A lista de Lojas MUST mostrar cadastro e validação, com filtros, e os indicadores da US4.
+- **FR-033**: A lista de Lojas MUST mostrar cadastro e validação, com filtros, e os indicadores da US4. Como no protótipo: os indicadores de validação, documentos com alerta e solicitações filtram a lista ao clicar; o preenchimento aparece em rosca com os níveis Completo, Falta algo e Falta muito (cada nível filtra); cada loja mostra a razão social e, ao passar o mouse no preenchimento, os campos que faltam. (Ajuste de 2026-10-30.)
 
 **Abas**
 

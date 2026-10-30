@@ -30,6 +30,7 @@ export function GroupDetailView({
   const [tab, setTab] = useState<DetailTab>('stores');
   const [isEditing, setIsEditing] = useState(false);
   const [statusAction, setStatusAction] = useState<StatusAction | null>(null);
+  const [isAddingStore, setIsAddingStore] = useState(false);
 
   if (isLoading) return <LoadingState label="Carregando grupo" />;
   if (error?.code === 'GROUP_NOT_FOUND') {
@@ -51,7 +52,13 @@ export function GroupDetailView({
   if (error || !group)
     return <ErrorState message={error?.message ?? 'Erro ao carregar'} onRetry={reload} />;
 
-  const context: GroupTabContext = { group, canEdit, onChanged: reload };
+  const context: GroupTabContext = {
+    group,
+    canEdit,
+    onChanged: reload,
+    isAddingStore,
+    setIsAddingStore,
+  };
 
   return (
     <>
@@ -60,6 +67,10 @@ export function GroupDetailView({
         canEdit={canEdit}
         onEdit={() => setIsEditing(true)}
         onStatusAction={setStatusAction}
+        onAddStore={() => {
+          setTab('stores');
+          setIsAddingStore(true);
+        }}
       />
       <GroupSummaryCards group={group} />
 

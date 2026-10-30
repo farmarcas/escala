@@ -16,6 +16,7 @@ export type StoresFilter = {
   completeness: string;
   validation: string;
   hasOpenRequest: string;
+  docAlert: string;
 };
 
 const INITIAL: StoresFilter = {
@@ -27,6 +28,7 @@ const INITIAL: StoresFilter = {
   completeness: '',
   validation: '',
   hasOpenRequest: '',
+  docAlert: '',
 };
 
 // Links da Visão geral chegam com filtro na URL (?validacao=attention, ?status=PENDING, ?solicitacao=1).
@@ -36,6 +38,7 @@ function initialFilter(params: URLSearchParams): StoresFilter {
     validation: params.get('validacao') ?? '',
     status: params.get('status') ?? '',
     hasOpenRequest: params.get('solicitacao') ? 'true' : '',
+    docAlert: params.get('documento') ? 'true' : '',
   };
 }
 
@@ -54,6 +57,11 @@ export function useStores() {
     filter,
     updateFilter: (patch: Partial<StoresFilter>) => {
       setFilter((current) => ({ ...current, ...patch }));
+      setPage(1);
+    },
+    // Indicadores clicáveis: o clique liga o filtro; clicar de novo desliga.
+    toggleFilter: (key: keyof StoresFilter, value: string) => {
+      setFilter((current) => ({ ...current, [key]: current[key] === value ? '' : value }));
       setPage(1);
     },
     clearFilters: () => {

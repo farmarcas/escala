@@ -199,13 +199,14 @@ describe('economic groups · update', () => {
     expect(call?.[3].summary).toContain('proprietário');
   });
 
-  it('deve manter o pseudônimo de quem já era proprietário', async () => {
+  it('deve recusar trocar o proprietário pela edição quando o grupo já tem um', async () => {
     const repo = makeRepo();
 
-    await makeEconomicGroupsService(repo).update(admin, 417, {
-      owner: { name: 'Carla M.', email: 'carla@exemplo.com.br', phone: '11900004410' },
+    const result = makeEconomicGroupsService(repo).update(admin, 417, {
+      owner: { name: 'Outra Pessoa', email: 'outra@exemplo.com.br', phone: '11900004410' },
     });
 
-    expect(vi.mocked(repo.update).mock.calls[0]?.[2].owner?.pseudonym).toBeUndefined();
+    await expect(result).rejects.toMatchObject({ code: 'OWNER_TRANSFER_REQUIRED' });
+    expect(repo.update).not.toHaveBeenCalled();
   });
 });

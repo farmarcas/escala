@@ -110,6 +110,33 @@ export const completenessInputOf = (store: StoreRow, documentTypes: string[]) =>
   strategyCount: entriesOfKind(store, 'STRATEGY').length,
 });
 
+// Campos vazios de várias lojas de uma vez (dica "Falta: …" na lista de Lojas), em duas consultas.
+export const missingFieldsByStore = async (
+  tx: Tx,
+  storeIds: string[],
+): Promise<Map<string, string[]>> => {
+  if (storeIds.length === 0) return new Map();
+  const stores = await tx.store.findMany({
+    where: { id: { in: storeIds } },
+    include: storeInclude,
+  });
+  const docs = await tx.storeDocument.findMany({
+    where: { storeId: { in: storeIds }, supersededAt: null, requestId: null },
+    select: { storeId: true, docType: true },
+  });
+  return new Map(
+    stores.map((store) => [
+      store.id,
+      computeCompleteness(
+        completenessInputOf(
+          store,
+          docs.filter((doc) => doc.storeId === store.id).map((doc) => doc.docType),
+        ),
+      ).missing,
+    ]),
+  );
+};
+
 // Recalcula e grava o preenchimento (lista de Lojas filtra por estas colunas).
 export const refreshCompleteness = async (tx: Tx, storeId: string) => {
   const store = await tx.store.findUniqueOrThrow({ where: { id: storeId }, include: storeInclude });

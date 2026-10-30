@@ -28,8 +28,8 @@ export function GroupsKpis({ stats }: GroupsKpisProps) {
   const topUfs = s.byUf.slice(0, 3).map((item) => item.uf);
 
   return (
-    // Seis indicadores: 3 × 2 em telas médias, todos lado a lado nas largas.
-    <KpiGrid className="sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+    // Seis indicadores lado a lado no computador; 3 × 2 no tablet.
+    <KpiGrid className="sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
       <KpiCard
         label="GEs cadastrados"
         value={formatNumber(s.byStatus.all)}

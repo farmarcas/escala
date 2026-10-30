@@ -47,7 +47,7 @@ const itemsOf = (attention: Overview['attention']): AttentionItem[] => [
     title: 'Documentos vencidos ou vencendo',
     detail: `Em ${pluralize(attention.documentAlerts.stores, 'loja', 'lojas')} · nos próximos 30 dias`,
     action: 'Ver lojas',
-    to: '/lojas',
+    to: '/lojas?documento=1',
   },
   {
     key: 'pending',

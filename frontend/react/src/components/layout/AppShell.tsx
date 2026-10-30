@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { MenuRail, type ShellVariant } from './MenuRail';
+import { PageTitleProvider } from './PageTitle';
 import { TopBar, type Crumb } from './TopBar';
 
 const RAIL_KEY = 'backoffice.railCollapsed';
@@ -47,24 +48,26 @@ export function AppShell({
   };
 
   return (
-    <div data-side={variant} className="flex min-h-screen bg-background">
-      <MenuRail
-        isCollapsed={isCollapsed}
-        variant={variant}
-        title={railTitle}
-        subtitle={railSubtitle}
-      />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar
-          crumbs={crumbs}
-          isReadOnly={isReadOnly}
-          account={account}
-          isRailCollapsed={isCollapsed}
-          onToggleRail={handleToggle}
+    <PageTitleProvider>
+      <div data-side={variant} className="flex min-h-screen bg-background">
+        <MenuRail
+          isCollapsed={isCollapsed}
+          variant={variant}
+          title={railTitle}
+          subtitle={railSubtitle}
         />
-        {mobileNav}
-        <main className="min-w-0 flex-1">{children}</main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopBar
+            crumbs={crumbs}
+            isReadOnly={isReadOnly}
+            account={account}
+            isRailCollapsed={isCollapsed}
+            onToggleRail={handleToggle}
+          />
+          {mobileNav}
+          <main className="min-w-0 flex-1">{children}</main>
+        </div>
       </div>
-    </div>
+    </PageTitleProvider>
   );
 }
