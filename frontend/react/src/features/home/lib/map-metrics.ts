@@ -154,6 +154,10 @@ export function frameFor(focus: readonly Uf[] | null, width: number, height: num
   };
 }
 
+// Estados pequenos do litoral do Nordeste: na vista do Brasil as etiquetas se amontoam.
+// Elas aparecem ao aproximar a região; o valor continua na dica e na tabela.
+export const LABEL_ONLY_WHEN_ZOOMED: readonly Uf[] = ['RN', 'PB', 'PE', 'AL', 'SE'];
+
 // Deslocamento da etiqueta para não cobrir estados vizinhos pequenos (protótipo).
 export const LABEL_OFFSET: Partial<Record<Uf, [number, number]>> = {
   DF: [26, -10],

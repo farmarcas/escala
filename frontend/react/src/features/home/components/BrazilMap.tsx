@@ -7,6 +7,7 @@ import {
   binOf,
   frameFor,
   LABEL_OFFSET,
+  LABEL_ONLY_WHEN_ZOOMED,
   METRICS,
   REGIONS,
   regionOf,
@@ -133,7 +134,12 @@ export function BrazilMap({ presence, metric, region, uf, onSelectUf, onZoomOut 
               />
             );
           })}
-          {UFS.filter((id) => presence.has(id) && isInFocus(id)).map((id) => {
+          {UFS.filter(
+            (id) =>
+              presence.has(id) &&
+              isInFocus(id) &&
+              (focus !== null || !LABEL_ONLY_WHEN_ZOOMED.includes(id)),
+          ).map((id) => {
             const shape = BRAZIL_GEOMETRY[id];
             const [dx, dy] = LABEL_OFFSET[id] ?? [0, 0];
             const cx = shape.x + shape.width / 2 + dx * k;
