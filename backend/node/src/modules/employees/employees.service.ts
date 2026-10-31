@@ -1,10 +1,17 @@
 import { ConflictError } from '../../shared/errors/conflict-error.js';
 import { NotFoundError } from '../../shared/errors/not-found-error.js';
 import { assertExportSize, EXPORT_LIMIT } from '../../shared/http/csv.js';
+import type { FacetCount } from '../../shared/http/list-filters.js';
 import type { PlatformIdentity } from '../../shared/identity/identity.js';
 import type { AuditEntry, AuditEventView } from '../audit/audit.types.js';
 import { statusTransition } from './employee-status.js';
+import {
+  employeeAccessRoleSchema,
+  employeeAreaSchema,
+  employeeStatusSchema,
+} from './employees.schemas.js';
 import type {
+  EmployeeFacetField,
   CreateEmployeeInput,
   EmployeeAccessRoleValue,
   EmployeeAreaValue,
@@ -48,6 +55,12 @@ export type EmployeeWrite = Partial<Omit<CreateEmployeeInput, 'phone'>> & {
   terminatedAt?: Date | null;
 };
 
+const FACET_VALUES: Record<EmployeeFacetField, readonly string[]> = {
+  area: employeeAreaSchema.options,
+  accessRole: employeeAccessRoleSchema.options,
+  status: employeeStatusSchema.options,
+};
+
 export type EmployeesRepository = {
   list: (
     actor: PlatformIdentity,
@@ -55,6 +68,11 @@ export type EmployeesRepository = {
     page: number,
     pageSize: number,
   ) => Promise<{ data: EmployeeRecord[]; total: number }>;
+  facetCounts: (
+    actor: PlatformIdentity,
+    field: EmployeeFacetField,
+    filter: EmployeeFilter,
+  ) => Promise<Map<string, number>>;
   stats: (actor: PlatformIdentity) => Promise<EmployeeStats>;
   findById: (actor: PlatformIdentity, id: string) => Promise<EmployeeDetailRecord | null>;
   findIdByEmail: (actor: PlatformIdentity, email: string) => Promise<string | null>;
@@ -113,6 +131,16 @@ export const makeEmployeesService = (repo: EmployeesRepository) => {
 
     stats(actor: PlatformIdentity) {
       return repo.stats(actor);
+    },
+
+    // Quantos registros há em cada valor do campo, com os outros filtros aplicados.
+    async facets(actor: PlatformIdentity, field: EmployeeFacetField, filter: EmployeeFilter) {
+      const counts = await repo.facetCounts(actor, field, filter);
+      const data: FacetCount[] = FACET_VALUES[field].map((value) => ({
+        value,
+        count: counts.get(value) ?? 0,
+      }));
+      return { field, data };
     },
 
     async exportRows(actor: PlatformIdentity, filter: EmployeeFilter) {

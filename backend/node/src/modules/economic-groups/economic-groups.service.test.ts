@@ -51,6 +51,8 @@ const group = (overrides: Partial<GroupDetailRecord> = {}): GroupDetailRecord =>
 
 const makeRepo = (overrides: Partial<EconomicGroupsRepository> = {}): EconomicGroupsRepository => ({
   list: vi.fn().mockResolvedValue({ data: [group()], total: 1 }),
+  count: vi.fn().mockResolvedValue(0),
+  facetValues: vi.fn().mockResolvedValue([]),
   stats: vi.fn(),
   findByNumber: vi.fn().mockResolvedValue(group()),
   create: vi.fn().mockResolvedValue(group()),

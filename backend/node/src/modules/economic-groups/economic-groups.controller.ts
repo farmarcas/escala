@@ -8,6 +8,7 @@ import type {
   bulkAngelRequest,
   createGroupRequest,
   getGroupRequest,
+  groupFacetsRequest,
   listGroupAuditRequest,
   listGroupsRequest,
   ownerTransferRequest,
@@ -28,6 +29,12 @@ export const makeEconomicGroupsController = (service: EconomicGroupsService) => 
     const { query } = readValidated<z.infer<typeof listGroupsRequest>>(res);
     const rows = await service.exportRows(readPlatformIdentity(req), query);
     sendCsv(res, 'grupos', toCsv(GROUP_CSV_COLUMNS, rows));
+  },
+
+  async facets(req: Request, res: Response) {
+    const { query } = readValidated<z.infer<typeof groupFacetsRequest>>(res);
+    const { field, ...filters } = query;
+    res.json(await service.facets(readPlatformIdentity(req), field, filters));
   },
 
   async stats(req: Request, res: Response) {

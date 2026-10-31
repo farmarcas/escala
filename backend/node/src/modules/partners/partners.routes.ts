@@ -10,6 +10,7 @@ import {
   getPartnerRequest,
   listPartnersRequest,
   partnerAuditRequest,
+  partnerFacetsRequest,
   partnerStatsRequest,
   partnerStatusRequest,
   updateContactRequest,
@@ -27,6 +28,7 @@ export const partnersRouter = (repo: PartnersRepository = partnersRepository) =>
 
   router.get('/', validate(listPartnersRequest), controller.list);
   router.get('/stats', validate(partnerStatsRequest), controller.stats);
+  router.get('/facets', validate(partnerFacetsRequest), controller.facets);
   router.get('/export', validate(listPartnersRequest), controller.exportCsv);
   router.get('/:id', validate(getPartnerRequest), controller.get);
   router.post('/', adminOnly, validate(createPartnerRequest), controller.create);

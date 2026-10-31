@@ -57,6 +57,17 @@ describe('parceiros: indústrias e distribuidores', () => {
     expect(industries.body.data.map((p: { tradeName: string }) => p.tradeName)).toEqual([
       'Lab Exemplo',
     ]);
+    const both = await request(app)
+      .get(`${BASE}?type=INDUSTRY,DISTRIBUTOR&status=ACTIVE`)
+      .set(ADMIN_HEADERS);
+    expect(both.body.meta.total).toBe(2);
+    const facets = await request(app)
+      .get(`${BASE}/facets?field=type&search=Lab`)
+      .set(ANALYST_HEADERS);
+    expect(facets.body.data).toEqual([
+      { value: 'INDUSTRY', count: 1 },
+      { value: 'DISTRIBUTOR', count: 0 },
+    ]);
     const stats = await request(app).get(`${BASE}/stats`).set(ADMIN_HEADERS);
     expect(stats.body).toEqual({
       active: 2,

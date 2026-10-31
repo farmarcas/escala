@@ -2,9 +2,12 @@ import { ConflictError } from '../../shared/errors/conflict-error.js';
 import { NotFoundError } from '../../shared/errors/not-found-error.js';
 import { ValidationError } from '../../shared/errors/validation-error.js';
 import { assertExportSize, EXPORT_LIMIT } from '../../shared/http/csv.js';
+import type { FacetCount } from '../../shared/http/list-filters.js';
 import type { PlatformIdentity } from '../../shared/identity/identity.js';
 import type { AuditEntry, AuditEventView } from '../audit/audit.types.js';
+import { partnerStatusSchema, partnerTypeSchema } from './partners.schemas.js';
 import type {
+  PartnerFacetField,
   CreateContactInput,
   CreatePartnerInput,
   PartnerFilter,
@@ -50,6 +53,11 @@ export type PartnerStats = {
 
 export type ContactWrite = Partial<Omit<ContactRecord, 'id'>>;
 
+const FACET_VALUES: Record<PartnerFacetField, readonly string[]> = {
+  type: partnerTypeSchema.options,
+  status: partnerStatusSchema.options,
+};
+
 export type PartnersRepository = {
   list: (
     actor: PlatformIdentity,
@@ -57,6 +65,11 @@ export type PartnersRepository = {
     page: number,
     pageSize: number,
   ) => Promise<{ data: PartnerRecord[]; total: number }>;
+  facetCounts: (
+    actor: PlatformIdentity,
+    field: PartnerFacetField,
+    filter: PartnerFilter,
+  ) => Promise<Map<string, number>>;
   stats: (actor: PlatformIdentity) => Promise<PartnerStats>;
   findById: (actor: PlatformIdentity, id: string) => Promise<PartnerDetailRecord | null>;
   findIdByCnpj: (actor: PlatformIdentity, cnpj: string) => Promise<string | null>;
@@ -147,6 +160,16 @@ export const makePartnersService = (repo: PartnersRepository) => {
 
     stats(actor: PlatformIdentity) {
       return repo.stats(actor);
+    },
+
+    // Quantos registros há em cada valor do campo, com os outros filtros aplicados.
+    async facets(actor: PlatformIdentity, field: PartnerFacetField, filter: PartnerFilter) {
+      const counts = await repo.facetCounts(actor, field, filter);
+      const data: FacetCount[] = FACET_VALUES[field].map((value) => ({
+        value,
+        count: counts.get(value) ?? 0,
+      }));
+      return { field, data };
     },
 
     async exportRows(actor: PlatformIdentity, filter: PartnerFilter) {

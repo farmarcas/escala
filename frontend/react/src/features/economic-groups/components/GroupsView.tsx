@@ -82,11 +82,14 @@ export function GroupsView({ canEdit }: GroupsViewProps) {
 
       <Card as="section" className="overflow-hidden">
         <GroupsToolbar
-          filter={list.filter}
-          stats={list.stats}
+          filters={list.filters}
+          search={list.search}
+          debouncedSearch={list.debouncedSearch}
+          onSearch={list.setSearch}
           brands={brands.all}
           angels={angels.options}
-          onChange={list.updateFilter}
+          shown={list.meta?.total ?? 0}
+          total={list.stats?.byStatus.all}
         />
         {canEdit && selected.size > 0 && (
           <div

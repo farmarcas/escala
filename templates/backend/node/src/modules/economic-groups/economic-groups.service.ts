@@ -1,5 +1,6 @@
 import { maskCpf } from '../../shared/br/cpf.js';
 import { assertExportSize, EXPORT_LIMIT } from '../../shared/http/csv.js';
+import type { FacetCount } from '../../shared/http/list-filters.js';
 import { generatePseudonym } from '../../shared/br/pseudonym.js';
 import { ConflictError } from '../../shared/errors/conflict-error.js';
 import { NotFoundError } from '../../shared/errors/not-found-error.js';
@@ -11,6 +12,7 @@ import type {
   BulkAngelInput,
   CreateGroupInput,
   GroupStatusValue,
+  GroupFacetField,
   ListGroupsQuery,
   OwnerInput,
   OwnerTransferInput,
@@ -111,6 +113,8 @@ export type EconomicGroupsRepository = {
     page: number,
     pageSize: number,
   ) => Promise<{ data: GroupSummaryRecord[]; total: number }>;
+  count: (actor: PlatformIdentity, filter: GroupFilter) => Promise<number>;
+  facetValues: (actor: PlatformIdentity, field: GroupFacetField) => Promise<string[]>;
   stats: (actor: PlatformIdentity) => Promise<GroupStats>;
   findByNumber: (actor: PlatformIdentity, number: number) => Promise<GroupDetailRecord | null>;
   create: (
@@ -311,6 +315,17 @@ export const makeEconomicGroupsService = (repo: EconomicGroupsRepository) => {
 
     stats(actor: PlatformIdentity) {
       return repo.stats(actor);
+    },
+
+    // Quantos grupos há em cada valor do campo, com os outros filtros aplicados.
+    async facets(actor: PlatformIdentity, field: GroupFacetField, query: ListGroupsQuery) {
+      const { page: _page, pageSize: _pageSize, ...filter } = query;
+      const base = { ...filter, searchOwnerName: isPlatformAdmin(actor) };
+      const data: FacetCount[] = [];
+      for (const value of await repo.facetValues(actor, field)) {
+        data.push({ value, count: await repo.count(actor, { ...base, [field]: [value] }) });
+      }
+      return { field, data };
     },
 
     // Todas as linhas filtradas, com a mesma pseudonimização da tela (spec 003, FR-073).

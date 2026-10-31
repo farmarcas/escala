@@ -1,7 +1,8 @@
 import { Prisma } from '../../generated/prisma/client.js';
 import { withActor, type Tx } from '../../shared/database/with-actor.js';
 import { listAuditByGroup, recordAudit } from '../audit/audit.repository.js';
-import type { GroupStatusValue } from './economic-groups.schemas.js';
+import { NO_ANGEL } from '../../shared/http/list-filters.js';
+import { GROUP_STATUSES, type GroupStatusValue } from './economic-groups.schemas.js';
 import type {
   EconomicGroupsRepository,
   GroupDetailRecord,
@@ -72,20 +73,32 @@ const escapeLike = (value: string) => value.replace(/[\\%_]/g, (char) => `\\${ch
 
 const filterSql = (filter: Partial<GroupFilter>): Prisma.Sql => {
   const parts: Prisma.Sql[] = [Prisma.sql`g.deleted_at IS NULL`];
-  if (filter.status) parts.push(Prisma.sql`g.status = ${filter.status}::group_status`);
-  if (filter.uf) {
-    parts.push(Prisma.sql`EXISTS (SELECT 1 FROM stores x WHERE x.economic_group_id = g.id
-                                  AND x.deleted_at IS NULL AND x.uf = ${filter.uf})`);
+  if (filter.status?.length) {
+    const statuses = filter.status.map((status) => Prisma.sql`${status}::group_status`);
+    parts.push(Prisma.sql`g.status IN (${Prisma.join(statuses)})`);
   }
-  if (filter.angelId) parts.push(Prisma.sql`g.angel_employee_id = ${filter.angelId}::uuid`);
+  if (filter.uf?.length) {
+    parts.push(Prisma.sql`EXISTS (SELECT 1 FROM stores x WHERE x.economic_group_id = g.id
+                                  AND x.deleted_at IS NULL AND x.uf IN (${Prisma.join(filter.uf)}))`);
+  }
+  if (filter.brandId?.length) {
+    const ids = filter.brandId.map((id) => Prisma.sql`${id}::uuid`);
+    parts.push(Prisma.sql`EXISTS (SELECT 1 FROM stores x WHERE x.economic_group_id = g.id
+                                  AND x.deleted_at IS NULL AND x.brand_id IN (${Prisma.join(ids)}))`);
+  }
   // Grupo arquivado não precisa de Anjo: "Sem Anjo" é a mesma conta do indicador de Funcionários.
-  if (filter.withoutAngel) {
-    parts.push(Prisma.sql`g.angel_employee_id IS NULL AND g.status <> 'ARCHIVED'`);
+  const withoutAngel = Prisma.sql`(g.angel_employee_id IS NULL AND g.status <> 'ARCHIVED')`;
+  if (filter.angelId?.length) {
+    const ids = filter.angelId.filter((id) => id !== NO_ANGEL);
+    const angels: Prisma.Sql[] = [];
+    if (ids.length) {
+      const list = ids.map((id) => Prisma.sql`${id}::uuid`);
+      angels.push(Prisma.sql`g.angel_employee_id IN (${Prisma.join(list)})`);
+    }
+    if (filter.angelId.includes(NO_ANGEL)) angels.push(withoutAngel);
+    parts.push(Prisma.sql`(${Prisma.join(angels, ' OR ')})`);
   }
-  if (filter.brandId) {
-    parts.push(Prisma.sql`EXISTS (SELECT 1 FROM stores x WHERE x.economic_group_id = g.id
-                                  AND x.deleted_at IS NULL AND x.brand_id = ${filter.brandId}::uuid)`);
-  }
+  if (filter.withoutAngel) parts.push(withoutAngel);
   if (filter.search) {
     const like = `%${escapeLike(filter.search)}%`;
     const digits = filter.search.replace(/\D/g, '');
@@ -203,6 +216,49 @@ export const economicGroupsRepository: EconomicGroupsRepository = {
       const totals = await tx.$queryRaw<{ total: number }[]>`
         SELECT count(*)::int AS total FROM economic_groups g ${ownerJoin} WHERE ${where}`;
       return { data: rows.map(toSummary), total: totals[0]?.total ?? 0 };
+    });
+  },
+
+  count(actor, filter) {
+    return withActor(actor, async (tx) => {
+      const totals = await tx.$queryRaw<{ total: number }[]>`
+        SELECT count(*)::int AS total FROM economic_groups g ${ownerJoin} WHERE ${filterSql(filter)}`;
+      return totals[0]?.total ?? 0;
+    });
+  },
+
+  // Valores possíveis de cada campo do "+ Filtro".
+  facetValues(actor, field) {
+    return withActor(actor, async (tx) => {
+      switch (field) {
+        case 'status':
+          return [...GROUP_STATUSES];
+        case 'uf': {
+          const rows = await tx.store.findMany({
+            where: { deletedAt: null },
+            distinct: ['uf'],
+            select: { uf: true },
+            orderBy: { uf: 'asc' },
+          });
+          return rows.map((row) => row.uf);
+        }
+        case 'brandId': {
+          const rows = await tx.store.findMany({
+            where: { deletedAt: null },
+            distinct: ['brandId'],
+            select: { brandId: true },
+          });
+          return rows.map((row) => row.brandId);
+        }
+        case 'angelId': {
+          const rows = await tx.economicGroup.findMany({
+            where: { deletedAt: null, angelEmployeeId: { not: null } },
+            distinct: ['angelEmployeeId'],
+            select: { angelEmployeeId: true },
+          });
+          return [...rows.map((row) => row.angelEmployeeId!), NO_ANGEL];
+        }
+      }
     });
   },
 

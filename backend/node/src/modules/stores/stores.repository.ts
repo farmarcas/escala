@@ -7,12 +7,8 @@ import {
   missingFieldsByStore,
   refreshCompleteness,
 } from '../store-page/store-page.repository.js';
-import {
-  NO_ANGEL,
-  STORE_ALERTS,
-  type StoreFilter,
-  type StoreStatusValue,
-} from './stores.schemas.js';
+import { NO_ANGEL } from '../../shared/http/list-filters.js';
+import { STORE_ALERTS, type StoreFilter, type StoreStatusValue } from './stores.schemas.js';
 import type { PlatformIdentity } from '../../shared/identity/identity.js';
 import type { AuditEntry } from '../audit/audit.types.js';
 import type { StoreHistoryChange, StoreRecord, StoresRepository } from './stores.service.js';

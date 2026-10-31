@@ -89,6 +89,9 @@ Mudanças em rotas que já existem:
 | `POST /stores/bulk` | `{ action: 'BLOCK' \| 'UNBLOCK' \| 'REMIND', codes: number[1..200], justification }` (motivo obrigatório só para bloquear e desbloquear) | `{ changed, skipped }` |
 | `GET /stores?uf=SP,MG&stage=OPENED&…` | cada filtro aceita vários valores separados por vírgula: `brandId`, `uf`, `angelId` (ou `NONE`), `status` (inclui `OPERATING`), `stage`, `blocked`, `completeness`, `validation`, `alert` (`doc`, `outdated`, `request`) | lista paginada, valores combinados com "ou" no mesmo campo e "e" entre campos |
 | `GET /stores/facets?field=uf&…` | um campo do filtro + os demais filtros | `{ field, data: [{ value, count }] }`: quantas lojas há em cada valor |
+| `GET /economic-groups?uf=SP,MG&status=ACTIVE&angelId=NONE…` e `GET /economic-groups/facets?field=…` | `status`, `uf`, `brandId`, `angelId` (ou `NONE`) com vários valores; `withoutAngel=true` continua aceito | lista paginada / `{ field, data: [{ value, count }] }` |
+| `GET /employees?area=TRADE,COMMERCIAL…` e `GET /employees/facets?field=…` | `area`, `accessRole`, `status` com vários valores | lista paginada / `{ field, data: [{ value, count }] }` |
+| `GET /partners?type=INDUSTRY,DISTRIBUTOR…` e `GET /partners/facets?field=…` | `type`, `status` com vários valores | lista paginada / `{ field, data: [{ value, count }] }` |
 | `GET /stores?codes=1,2,3` e `GET /stores/export?codes=…` | até 200 códigos separados por vírgula | só as lojas escolhidas ("Exportar selecionadas") |
 | `GET /stores/export` | filtros da lista | `text/csv; charset=utf-8` |
 | `GET /economic-groups/export` | filtros da lista | idem |

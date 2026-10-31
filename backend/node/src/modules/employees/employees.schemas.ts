@@ -6,6 +6,7 @@ import {
   searchQuery,
   uuidParam,
 } from '../../shared/http/request-schemas.js';
+import { listOf } from '../../shared/http/list-filters.js';
 
 // Áreas da Farmarcas: a mesma lista do Gestão 360 (spec 003, FR-011).
 export const employeeAreaSchema = z.enum([
@@ -70,15 +71,21 @@ export const listEmployeesQuery = z
   .object({
     ...paginationShape,
     search: searchQuery,
-    area: employeeAreaSchema.optional(),
-    accessRole: employeeAccessRoleSchema.optional(),
-    status: employeeStatusSchema.optional(),
+    // "+ Filtro": cada campo aceita vários valores separados por vírgula.
+    area: listOf(employeeAreaSchema.options),
+    accessRole: listOf(employeeAccessRoleSchema.options),
+    status: listOf(employeeStatusSchema.options),
   })
   .strict();
 export type ListEmployeesQuery = z.infer<typeof listEmployeesQuery>;
 export type EmployeeFilter = Omit<ListEmployeesQuery, 'page' | 'pageSize'>;
 
 export const listEmployeesRequest = requestSchema({ query: listEmployeesQuery });
+export const EMPLOYEE_FACET_FIELDS = ['area', 'accessRole', 'status'] as const;
+export type EmployeeFacetField = (typeof EMPLOYEE_FACET_FIELDS)[number];
+export const employeeFacetsRequest = requestSchema({
+  query: listEmployeesQuery.extend({ field: z.enum(EMPLOYEE_FACET_FIELDS) }),
+});
 export const employeeStatsRequest = requestSchema({});
 export const getEmployeeRequest = requestSchema({ params: uuidParam });
 export const createEmployeeRequest = requestSchema({ body: createEmployeeSchema });

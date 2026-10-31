@@ -1,66 +1,61 @@
-import { SearchField } from '@/components/ui/SearchField';
-import { SegmentedControl } from '@/components/ui/SegmentedControl';
-import { SelectField } from '@/components/ui/SelectField';
-import { UF_OPTIONS } from '@/lib/uf';
+import { useMemo } from 'react';
+import { FilterToolbar } from '@/components/ui/FilterToolbar';
 import type { BrandOption } from '@/hooks/useBrandOptions';
 import type { EmployeeOption } from '@/hooks/useEmployeeOptions';
-import { NO_ANGEL_FILTER, type GroupStats, type GroupsFilter, type StatusFilter } from '../types';
+import type { FieldFilters } from '@/hooks/useFieldFilters';
+import { useFilterControls } from '@/hooks/useFilterControls';
+import { formatNumber } from '@/lib/format';
+import { GROUP_SHORTCUTS, groupFilterConfig, type GroupField } from '../filterFields';
 
 type GroupsToolbarProps = {
-  filter: GroupsFilter;
-  stats: GroupStats | undefined;
+  filters: FieldFilters<GroupField>;
+  search: string;
+  debouncedSearch: string;
+  onSearch: (value: string) => void;
   brands: BrandOption[];
   angels: EmployeeOption[];
-  onChange: (patch: Partial<Omit<GroupsFilter, 'page'>>) => void;
+  shown: number;
+  total: number | undefined;
 };
 
-export function GroupsToolbar({ filter, stats, brands, angels, onChange }: GroupsToolbarProps) {
+// Busca, "+ Filtro", atalhos e etiquetas da lista de grupos (o mesmo filtro da lista de lojas).
+export function GroupsToolbar({
+  filters,
+  search,
+  debouncedSearch,
+  onSearch,
+  brands,
+  angels,
+  shown,
+  total,
+}: GroupsToolbarProps) {
+  const config = useMemo(
+    () =>
+      groupFilterConfig({
+        brands: new Map(brands.map((brand) => [brand.id, brand.name])),
+        angels: new Map(angels.map((angel) => [angel.id, angel.name])),
+      }),
+    [brands, angels],
+  );
+  const controls = useFilterControls(config, filters, { search: debouncedSearch });
+
   return (
-    <div className="flex flex-wrap items-center gap-4 border-b border-border px-5 py-4">
-      <SegmentedControl<StatusFilter>
-        label="Filtrar por status"
-        value={filter.status}
-        onChange={(status) => onChange({ status })}
-        segments={[
-          { value: 'all', label: 'Todos', count: stats?.byStatus.all },
-          { value: 'ACTIVE', label: 'Ativos', count: stats?.byStatus.active },
-          { value: 'SUSPENDED', label: 'Suspensos', count: stats?.byStatus.suspended },
-          { value: 'ARCHIVED', label: 'Arquivados', count: stats?.byStatus.archived },
-        ]}
-      />
-      <SearchField
-        label="Buscar por número do GE, nome ou proprietário"
-        value={filter.search}
-        onChange={(search) => onChange({ search })}
-        className="max-w-[340px] flex-1"
-      />
-      <SelectField
-        isLabelInline
-        label="Filtrar por estado"
-        placeholder="Todos"
-        options={UF_OPTIONS}
-        value={filter.uf}
-        onChange={(event) => onChange({ uf: event.target.value })}
-      />
-      <SelectField
-        isLabelInline
-        label="Filtrar por marca"
-        placeholder="Todas"
-        options={brands.map((brand) => ({ value: brand.id, label: brand.name }))}
-        value={filter.brandId}
-        onChange={(event) => onChange({ brandId: event.target.value })}
-      />
-      <SelectField
-        isLabelInline
-        label="Filtrar por Anjo"
-        placeholder="Todos"
-        options={[
-          { value: NO_ANGEL_FILTER, label: 'Sem Anjo' },
-          ...angels.map((angel) => ({ value: angel.id, label: angel.name })),
-        ]}
-        value={filter.angel}
-        onChange={(event) => onChange({ angel: event.target.value })}
-      />
-    </div>
+    <FilterToolbar
+      searchLabel="Buscar por número do GE, nome ou proprietário"
+      search={search}
+      onSearch={onSearch}
+      menu={controls.menu}
+      tags={controls.tags}
+      shortcuts={GROUP_SHORTCUTS.map((shortcut) => ({
+        label: shortcut.label,
+        isOn: filters.isPreset(shortcut.preset),
+        onToggle: () => filters.togglePreset(shortcut.preset),
+      }))}
+      summary={
+        total !== undefined
+          ? `Exibindo ${formatNumber(shown)} de ${formatNumber(total)} grupos`
+          : undefined
+      }
+    />
   );
 }

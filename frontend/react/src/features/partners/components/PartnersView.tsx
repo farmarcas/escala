@@ -6,15 +6,15 @@ import { Card } from '@/components/ui/Card';
 import { ExportCsvButton } from '@/components/ui/ExportCsvButton';
 import { KpiCard, KpiGrid } from '@/components/ui/KpiCard';
 import { Pagination } from '@/components/ui/Pagination';
-import { SearchField } from '@/components/ui/SearchField';
-import { SegmentedControl } from '@/components/ui/SegmentedControl';
-import { SelectField } from '@/components/ui/SelectField';
+import { FilterToolbar } from '@/components/ui/FilterToolbar';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/States';
 import { TableFooter } from '@/components/ui/Table';
+import { useFilterControls } from '@/hooks/useFilterControls';
 import { api } from '@/lib/api';
 import { formatNumber } from '@/lib/format';
 import { usePartnersList } from '../hooks/usePartnersList';
-import type { PartnerDetail, PartnerInput, TypeFilter } from '../types';
+import { PARTNER_FILTER, PARTNER_SHORTCUTS } from '../filterFields';
+import type { PartnerDetail, PartnerInput } from '../types';
 import { PartnerFormModal } from './PartnerFormModal';
 import { PartnersTable } from './PartnersTable';
 
@@ -24,6 +24,9 @@ type PartnersViewProps = { canEdit: boolean };
 export function PartnersView({ canEdit }: PartnersViewProps) {
   const navigate = useNavigate();
   const list = usePartnersList();
+  const controls = useFilterControls(PARTNER_FILTER, list.filters, {
+    search: list.debouncedSearch,
+  });
   const stats = list.stats;
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -56,16 +59,16 @@ export function PartnersView({ canEdit }: PartnersViewProps) {
           label="Indústrias"
           value={formatNumber(stats?.industries ?? 0)}
           context="Ativas"
-          onClick={() => list.updateFilter({ type: 'INDUSTRY' })}
-          isSelected={list.filter.type === 'INDUSTRY'}
+          onClick={() => list.filters.toggleSingle('type', 'INDUSTRY')}
+          isSelected={list.filters.isSingle('type', 'INDUSTRY')}
           isLoading={!stats}
         />
         <KpiCard
           label="Distribuidores"
           value={formatNumber(stats?.distributors ?? 0)}
           context="Ativos"
-          onClick={() => list.updateFilter({ type: 'DISTRIBUTOR' })}
-          isSelected={list.filter.type === 'DISTRIBUTOR'}
+          onClick={() => list.filters.toggleSingle('type', 'DISTRIBUTOR')}
+          isSelected={list.filters.isSingle('type', 'DISTRIBUTOR')}
           isLoading={!stats}
         />
         <KpiCard
@@ -78,35 +81,19 @@ export function PartnersView({ canEdit }: PartnersViewProps) {
       </KpiGrid>
 
       <Card as="section" className="overflow-hidden">
-        <div className="flex flex-wrap items-center gap-4 border-b border-border px-5 py-4">
-          <SegmentedControl<TypeFilter>
-            label="Filtrar por tipo"
-            value={list.filter.type}
-            onChange={(type) => list.updateFilter({ type })}
-            segments={[
-              { value: 'all', label: 'Todos', count: stats?.byType.all },
-              { value: 'INDUSTRY', label: 'Indústrias', count: stats?.byType.industry },
-              { value: 'DISTRIBUTOR', label: 'Distribuidores', count: stats?.byType.distributor },
-            ]}
-          />
-          <SearchField
-            label="Buscar por nome, razão social ou CNPJ"
-            value={list.filter.search}
-            onChange={(search) => list.updateFilter({ search })}
-            className="max-w-[340px] flex-1"
-          />
-          <SelectField
-            isLabelInline
-            label="Filtrar por situação"
-            placeholder="Todas"
-            options={[
-              { value: 'ACTIVE', label: 'Ativos' },
-              { value: 'INACTIVE', label: 'Inativos' },
-            ]}
-            value={list.filter.status}
-            onChange={(event) => list.updateFilter({ status: event.target.value })}
-          />
-        </div>
+        <FilterToolbar
+          searchLabel="Buscar por nome, razão social ou CNPJ"
+          search={list.search}
+          onSearch={list.setSearch}
+          menu={controls.menu}
+          tags={controls.tags}
+          shortcuts={PARTNER_SHORTCUTS.map((shortcut) => ({
+            label: shortcut.label,
+            isOn: list.filters.isPreset(shortcut.preset),
+            onToggle: () => list.filters.togglePreset(shortcut.preset),
+          }))}
+          summary={`Exibindo ${formatNumber(list.meta?.total ?? 0)} parceiros`}
+        />
         {list.isLoading && <LoadingState label="Carregando parceiros" />}
         {list.error && !list.isLoading && (
           <ErrorState message={list.error.message} onRetry={list.reload} />

@@ -38,9 +38,9 @@ const toRecord = ({ _count, ...row }: EmployeeRow): EmployeeRecord => ({
 
 const whereOf = (filter: EmployeeFilter): Prisma.FarmarcasEmployeeWhereInput => {
   const where: Prisma.FarmarcasEmployeeWhereInput = { deletedAt: null };
-  if (filter.area) where.area = filter.area;
-  if (filter.accessRole) where.accessRole = filter.accessRole;
-  if (filter.status) where.status = filter.status;
+  if (filter.area?.length) where.area = { in: filter.area };
+  if (filter.accessRole?.length) where.accessRole = { in: filter.accessRole };
+  if (filter.status?.length) where.status = { in: filter.status };
   if (filter.search) {
     const text = { contains: filter.search, mode: 'insensitive' } as const;
     where.OR = [{ name: text }, { email: text }, { jobTitle: text }];
@@ -89,6 +89,18 @@ export const employeesRepository: EmployeesRepository = {
       });
       const total = await tx.farmarcasEmployee.count({ where });
       return { data: rows.map(toRecord), total };
+    });
+  },
+
+  // Quantos funcionários há em cada valor do campo; o próprio campo sai do filtro.
+  facetCounts(actor, field, filter) {
+    return withActor(actor, async (tx) => {
+      const rows = await tx.farmarcasEmployee.groupBy({
+        by: [field],
+        where: whereOf({ ...filter, [field]: undefined }),
+        _count: { _all: true },
+      });
+      return new Map(rows.map((row) => [String(row[field]), row._count._all]));
     });
   },
 

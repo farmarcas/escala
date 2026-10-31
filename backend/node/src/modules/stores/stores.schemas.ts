@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { UFS } from '../../shared/br/uf.js';
+import { angelListOf, listOf, uuidListOf } from '../../shared/http/list-filters.js';
 import {
   paginationShape,
   requestSchema,
@@ -84,36 +85,12 @@ const storeFilters = {
 
 export const listGroupStoresQuery = z.object({ ...paginationShape, ...storeFilters }).strict();
 
-// Filtro de vários valores (protótipo "+ Filtro"): "SP,MG" vira ["SP", "MG"]; os valores de um
-// mesmo campo somam (ou), e campos diferentes se combinam (e).
-const splitList = (value: string) => value.split(',').filter(Boolean);
-const listOf = <T extends readonly [string, ...string[]]>(values: T) =>
-  z
-    .string()
-    .transform(splitList)
-    .pipe(z.array(z.enum(values)).min(1).max(50))
-    .optional();
-
-export const NO_ANGEL = 'NONE';
 export const STORE_ALERTS = ['doc', 'outdated', 'request'] as const;
 
 export const storeFilterShape = {
-  brandId: z
-    .string()
-    .transform(splitList)
-    .pipe(z.array(z.string().uuid()).min(1).max(50))
-    .optional(),
+  brandId: uuidListOf(),
   // Ids de funcionário; NONE = grupo sem Anjo.
-  angelId: z
-    .string()
-    .transform(splitList)
-    .pipe(
-      z
-        .array(z.union([z.string().uuid(), z.literal(NO_ANGEL)]))
-        .min(1)
-        .max(50),
-    )
-    .optional(),
+  angelId: angelListOf(),
   uf: listOf(UFS),
   // OPERATING = rede em operação, a mesma conta do Início: ativa ou pendente, de grupo não arquivado.
   status: listOf(['PENDING', 'ACTIVE', 'INACTIVE', 'OPERATING'] as const),

@@ -11,6 +11,7 @@ import {
   bulkAngelRequest,
   createGroupRequest,
   getGroupRequest,
+  groupFacetsRequest,
   groupStatsRequest,
   listGroupAuditRequest,
   listGroupsRequest,
@@ -36,6 +37,7 @@ export const economicGroupsRouter = (
 
   router.get('/', validate(listGroupsRequest), controller.list);
   router.get('/stats', validate(groupStatsRequest), controller.stats);
+  router.get('/facets', validate(groupFacetsRequest), controller.facets);
   router.get('/export', validate(listGroupsRequest), controller.exportCsv);
   router.post('/', adminOnly, validate(createGroupRequest), controller.create);
   router.post('/bulk-angel', adminOnly, validate(bulkAngelRequest), controller.bulkAngel);

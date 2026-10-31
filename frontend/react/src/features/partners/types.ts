@@ -33,10 +33,6 @@ export type PartnerStats = {
   byType: { all: number; industry: number; distributor: number };
 };
 
-export type TypeFilter = 'all' | PartnerType;
-
-export type PartnersFilter = { type: TypeFilter; search: string; status: string; page: number };
-
 export type PartnerInput = {
   type: PartnerType;
   cnpj: string;

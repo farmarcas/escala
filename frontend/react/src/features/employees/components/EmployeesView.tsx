@@ -5,14 +5,14 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ExportCsvButton } from '@/components/ui/ExportCsvButton';
 import { Pagination } from '@/components/ui/Pagination';
-import { SearchField } from '@/components/ui/SearchField';
-import { SelectField } from '@/components/ui/SelectField';
+import { FilterToolbar } from '@/components/ui/FilterToolbar';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/States';
 import { TableFooter } from '@/components/ui/Table';
+import { useFilterControls } from '@/hooks/useFilterControls';
 import { api } from '@/lib/api';
 import { formatNumber } from '@/lib/format';
 import { useEmployeesList } from '../hooks/useEmployeesList';
-import { ACCESS_ROLE_OPTIONS, AREA_OPTIONS } from '../labels';
+import { EMPLOYEE_FILTER, EMPLOYEE_SHORTCUTS } from '../filterFields';
 import type { EmployeeDetail, EmployeeInput } from '../types';
 import { EmployeeFormModal } from './EmployeeFormModal';
 import { EmployeesKpis } from './EmployeesKpis';
@@ -24,6 +24,9 @@ type EmployeesViewProps = { canEdit: boolean };
 export function EmployeesView({ canEdit }: EmployeesViewProps) {
   const navigate = useNavigate();
   const list = useEmployeesList();
+  const controls = useFilterControls(EMPLOYEE_FILTER, list.filters, {
+    search: list.debouncedSearch,
+  });
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   const handleCreate = async (input: EmployeeInput) => {
@@ -47,41 +50,19 @@ export function EmployeesView({ canEdit }: EmployeesViewProps) {
       <EmployeesKpis stats={list.stats} />
 
       <Card as="section" className="overflow-hidden">
-        <div className="flex flex-wrap items-center gap-4 border-b border-border px-5 py-4">
-          <SearchField
-            label="Buscar por nome, e-mail ou cargo"
-            value={list.filter.search}
-            onChange={(search) => list.updateFilter({ search })}
-            className="max-w-[340px] flex-1"
-          />
-          <SelectField
-            isLabelInline
-            label="Filtrar por área"
-            placeholder="Todas"
-            options={AREA_OPTIONS}
-            value={list.filter.area}
-            onChange={(event) => list.updateFilter({ area: event.target.value })}
-          />
-          <SelectField
-            isLabelInline
-            label="Filtrar por papel"
-            placeholder="Todos"
-            options={ACCESS_ROLE_OPTIONS}
-            value={list.filter.accessRole}
-            onChange={(event) => list.updateFilter({ accessRole: event.target.value })}
-          />
-          <SelectField
-            isLabelInline
-            label="Filtrar por situação"
-            placeholder="Todas"
-            options={[
-              { value: 'ACTIVE', label: 'Ativos' },
-              { value: 'TERMINATED', label: 'Desligados' },
-            ]}
-            value={list.filter.status}
-            onChange={(event) => list.updateFilter({ status: event.target.value })}
-          />
-        </div>
+        <FilterToolbar
+          searchLabel="Buscar por nome, e-mail ou cargo"
+          search={list.search}
+          onSearch={list.setSearch}
+          menu={controls.menu}
+          tags={controls.tags}
+          shortcuts={EMPLOYEE_SHORTCUTS.map((shortcut) => ({
+            label: shortcut.label,
+            isOn: list.filters.isPreset(shortcut.preset),
+            onToggle: () => list.filters.togglePreset(shortcut.preset),
+          }))}
+          summary={`Exibindo ${formatNumber(list.meta?.total ?? 0)} funcionários`}
+        />
         {list.isLoading && <LoadingState label="Carregando funcionários" />}
         {list.error && !list.isLoading && (
           <ErrorState message={list.error.message} onRetry={list.reload} />

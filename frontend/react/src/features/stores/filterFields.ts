@@ -1,13 +1,14 @@
-import type { FieldValues, FilterField } from './hooks/useStores';
+import type { FilterConfig } from '@/hooks/useFilterControls';
+import type { FilterField, StoreFields } from './hooks/useStores';
 
 // Campos do "+ Filtro", na ordem e nos grupos do protótipo (Lojas Lista).
-export const FILTER_GROUPS: { title: string; fields: FilterField[] }[] = [
+const FILTER_GROUPS: FilterConfig<FilterField>['groups'] = [
   { title: 'Cadastro', fields: ['brandId', 'uf', 'angelId'] },
   { title: 'Situação', fields: ['stage', 'status', 'blocked'] },
   { title: 'Governança', fields: ['completeness', 'validation', 'alert'] },
 ];
 
-export const FIELD_LABEL: Record<FilterField, string> = {
+const FIELD_LABEL: Record<FilterField, string> = {
   brandId: 'Bandeira',
   uf: 'UF',
   angelId: 'Anjo',
@@ -46,15 +47,23 @@ const FIXED_LABELS: Partial<Record<FilterField, Record<string, string>>> = {
 
 export type ValueLabels = { brands: Map<string, string>; angels: Map<string, string> };
 
-export function valueLabel(field: FilterField, value: string, labels: ValueLabels): string {
-  if (field === 'brandId') return labels.brands.get(value) ?? 'Marca';
-  if (field === 'angelId')
-    return value === 'NONE' ? 'Sem Anjo' : (labels.angels.get(value) ?? 'Anjo');
-  return FIXED_LABELS[field]?.[value] ?? value;
+// Bandeira e Anjo aparecem pelo nome, que vem das listas de marcas e funcionários.
+export function storeFilterConfig(labels: ValueLabels): FilterConfig<FilterField> {
+  return {
+    resource: '/stores',
+    groups: FILTER_GROUPS,
+    fieldLabel: FIELD_LABEL,
+    valueLabel: (field, value) => {
+      if (field === 'brandId') return labels.brands.get(value) ?? 'Marca';
+      if (field === 'angelId')
+        return value === 'NONE' ? 'Sem Anjo' : (labels.angels.get(value) ?? 'Anjo');
+      return FIXED_LABELS[field]?.[value] ?? value;
+    },
+  };
 }
 
 // Atalhos do protótipo. "Minha carteira" depende do Anjo logado, que chega com o login.
-export const SHORTCUTS: { label: string; preset: FieldValues | null; hint?: string }[] = [
+export const SHORTCUTS: { label: string; preset: StoreFields | null; hint?: string }[] = [
   {
     label: 'Minha carteira',
     preset: null,

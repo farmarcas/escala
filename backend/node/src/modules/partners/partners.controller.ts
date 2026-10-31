@@ -4,6 +4,7 @@ import { sendCsv, toCsv } from '../../shared/http/csv.js';
 import { readPlatformIdentity } from '../../shared/identity/authenticate.js';
 import { readValidated } from '../../shared/middlewares/validate.js';
 import type {
+  partnerFacetsRequest,
   createContactRequest,
   createPartnerRequest,
   deleteContactRequest,
@@ -29,6 +30,12 @@ export const makePartnersController = (service: PartnersService) => ({
     const { page: _page, pageSize: _pageSize, ...filter } = query;
     const rows = await service.exportRows(readPlatformIdentity(req), filter);
     sendCsv(res, 'parceiros', toCsv(PARTNER_CSV_COLUMNS, rows));
+  },
+
+  async facets(req: Request, res: Response) {
+    const { query } = readValidated<z.infer<typeof partnerFacetsRequest>>(res);
+    const { field, page: _page, pageSize: _pageSize, ...filter } = query;
+    res.json(await service.facets(readPlatformIdentity(req), field, filter));
   },
 
   async stats(req: Request, res: Response) {

@@ -52,8 +52,8 @@ const toDetail = (row: PartnerRow): PartnerDetailRecord => ({
 
 const whereOf = (filter: PartnerFilter): Prisma.PartnerWhereInput => {
   const where: Prisma.PartnerWhereInput = { deletedAt: null };
-  if (filter.type) where.type = filter.type;
-  if (filter.status) where.status = filter.status;
+  if (filter.type?.length) where.type = { in: filter.type };
+  if (filter.status?.length) where.status = { in: filter.status };
   if (filter.search) {
     const text = { contains: filter.search, mode: 'insensitive' } as const;
     const digits = filter.search.replace(/\D/g, '');
@@ -89,6 +89,18 @@ export const partnersRepository: PartnersRepository = {
       });
       const total = await tx.partner.count({ where });
       return { data: rows.map(toRecord), total };
+    });
+  },
+
+  // Quantos parceiros há em cada valor do campo; o próprio campo sai do filtro.
+  facetCounts(actor, field, filter) {
+    return withActor(actor, async (tx) => {
+      const rows = await tx.partner.groupBy({
+        by: [field],
+        where: whereOf({ ...filter, [field]: undefined }),
+        _count: { _all: true },
+      });
+      return new Map(rows.map((row) => [String(row[field]), row._count._all]));
     });
   },
 

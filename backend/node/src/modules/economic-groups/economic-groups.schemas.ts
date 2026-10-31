@@ -2,9 +2,11 @@ import { z } from 'zod';
 import { isValidCnpj, onlyDigits } from '../../shared/br/cnpj.js';
 import { isValidCpf } from '../../shared/br/cpf.js';
 import { UFS } from '../../shared/br/uf.js';
+import { angelListOf, listOf, uuidListOf } from '../../shared/http/list-filters.js';
 import { paginationShape, requestSchema, searchQuery } from '../../shared/http/request-schemas.js';
 
-export const groupStatusSchema = z.enum(['ACTIVE', 'SUSPENDED', 'ARCHIVED']);
+export const GROUP_STATUSES = ['ACTIVE', 'SUSPENDED', 'ARCHIVED'] as const;
+export const groupStatusSchema = z.enum(GROUP_STATUSES);
 export type GroupStatusValue = z.infer<typeof groupStatusSchema>;
 
 export const cnpjSchema = z
@@ -67,15 +69,20 @@ export const groupNumberParam = z.object({ number: z.coerce.number().int().posit
 export const listGroupsQuery = z
   .object({
     ...paginationShape,
-    status: groupStatusSchema.optional(),
+    // "+ Filtro": cada campo aceita vários valores separados por vírgula.
+    status: listOf(GROUP_STATUSES),
     search: searchQuery,
-    uf: z.enum(UFS).optional(),
-    brandId: z.string().uuid().optional(),
-    angelId: z.string().uuid().optional(),
+    uf: listOf(UFS),
+    brandId: uuidListOf(),
+    angelId: angelListOf(),
+    // Link antigo "Sem Anjo" (indicador de Funcionários); o mesmo que angelId=NONE.
     withoutAngel: z.enum(['true']).optional(),
   })
   .strict();
 export type ListGroupsQuery = z.infer<typeof listGroupsQuery>;
+
+export const GROUP_FACET_FIELDS = ['status', 'uf', 'brandId', 'angelId'] as const;
+export type GroupFacetField = (typeof GROUP_FACET_FIELDS)[number];
 
 // Anjo do grupo (spec 003, US2): null retira o Anjo.
 export const setAngelSchema = z.object({ employeeId: z.string().uuid().nullable() }).strict();
@@ -113,6 +120,9 @@ export const benefitCardSchema = z
 export type BenefitCardInput = z.infer<typeof benefitCardSchema>;
 
 export const listGroupsRequest = requestSchema({ query: listGroupsQuery });
+export const groupFacetsRequest = requestSchema({
+  query: listGroupsQuery.extend({ field: z.enum(GROUP_FACET_FIELDS) }),
+});
 export const ownerTransferRequest = requestSchema({
   body: ownerTransferSchema,
   params: groupNumberParam,

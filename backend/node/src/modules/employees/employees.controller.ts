@@ -4,6 +4,7 @@ import { sendCsv, toCsv } from '../../shared/http/csv.js';
 import { readPlatformIdentity } from '../../shared/identity/authenticate.js';
 import { readValidated } from '../../shared/middlewares/validate.js';
 import type {
+  employeeFacetsRequest,
   createEmployeeRequest,
   employeeAuditRequest,
   employeeStatusRequest,
@@ -26,6 +27,12 @@ export const makeEmployeesController = (service: EmployeesService) => ({
     const { page: _page, pageSize: _pageSize, ...filter } = query;
     const rows = await service.exportRows(readPlatformIdentity(req), filter);
     sendCsv(res, 'funcionarios', toCsv(EMPLOYEE_CSV_COLUMNS, rows));
+  },
+
+  async facets(req: Request, res: Response) {
+    const { query } = readValidated<z.infer<typeof employeeFacetsRequest>>(res);
+    const { field, page: _page, pageSize: _pageSize, ...filter } = query;
+    res.json(await service.facets(readPlatformIdentity(req), field, filter));
   },
 
   async stats(req: Request, res: Response) {

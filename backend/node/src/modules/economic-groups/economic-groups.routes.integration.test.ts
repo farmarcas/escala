@@ -78,6 +78,21 @@ describe('economic groups routes', () => {
     expect(await numbers(`brandId=${aurora.id}`)).toEqual([417]);
     expect(await numbers('search=ponte')).toEqual([301]);
     expect(await numbers('search=417')).toEqual([417]);
+    // Vários valores no mesmo campo somam (ou); campos diferentes se combinam (e).
+    expect(await numbers('uf=MG,CE')).toEqual([301, 417]);
+    expect(await numbers('uf=MG,CE&status=SUSPENDED')).toEqual([301]);
+    expect(await numbers('angelId=NONE')).toEqual([301, 417]);
+    expect((await request(app).get(`${BASE}?status=XX`)).status).toBe(400);
+
+    const facets = await request(app).get(`${BASE}/facets?field=uf&status=ACTIVE`);
+    expect(facets.body).toEqual({
+      field: 'uf',
+      data: [
+        { value: 'CE', count: 0 },
+        { value: 'MG', count: 1 },
+        { value: 'SP', count: 1 },
+      ],
+    });
 
     const list = await request(app).get(`${BASE}?search=aurora`);
     expect(list.body.data[0]).toMatchObject({

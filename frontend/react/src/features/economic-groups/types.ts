@@ -89,20 +89,6 @@ export type GroupInput = {
 
 export type StatusAction = 'suspend' | 'archive' | 'restore';
 
-export type StatusFilter = 'all' | GroupStatus;
-
-export type GroupsFilter = {
-  status: StatusFilter;
-  search: string;
-  uf: string;
-  brandId: string;
-  // Id do funcionário, ou NO_ANGEL para "Sem Anjo".
-  angel: string;
-  page: number;
-};
-
-export const NO_ANGEL_FILTER = 'NO_ANGEL';
-
 export type BulkResult = { changed: number; skipped: number };
 
 // Contexto entregue às abas que a página compõe (lojas e auditoria vêm de outras features).

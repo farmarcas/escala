@@ -6,6 +6,7 @@ import { employeesRepository } from './employees.repository.js';
 import {
   createEmployeeRequest,
   employeeAuditRequest,
+  employeeFacetsRequest,
   employeeStatsRequest,
   employeeStatusRequest,
   getEmployeeRequest,
@@ -23,6 +24,7 @@ export const employeesRouter = (repo: EmployeesRepository = employeesRepository)
 
   router.get('/', validate(listEmployeesRequest), controller.list);
   router.get('/stats', validate(employeeStatsRequest), controller.stats);
+  router.get('/facets', validate(employeeFacetsRequest), controller.facets);
   router.get('/export', validate(listEmployeesRequest), controller.exportCsv);
   router.get('/:id', validate(getEmployeeRequest), controller.get);
   router.post('/', adminOnly, validate(createEmployeeRequest), controller.create);

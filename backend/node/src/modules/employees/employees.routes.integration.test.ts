@@ -43,6 +43,23 @@ describe('funcionários da Farmarcas e Anjo do grupo', () => {
     await ownerDb.$disconnect();
   });
 
+  it('deve filtrar por vários valores e contar cada um', async () => {
+    await createEmployee('Paula Reis', { status: 'TERMINATED' });
+
+    const both = await request(app)
+      .get(`${BASE}/employees?status=ACTIVE,TERMINATED`)
+      .set(ADMIN_HEADERS);
+    const facets = await request(app)
+      .get(`${BASE}/employees/facets?field=status&area=MEMBER_SUCCESS`)
+      .set(ANALYST_HEADERS);
+
+    expect(both.body.meta.total).toBe(3);
+    expect(facets.body.data).toEqual([
+      { value: 'ACTIVE', count: 2 },
+      { value: 'TERMINATED', count: 1 },
+    ]);
+  });
+
   it('deve cadastrar, editar e listar funcionários, com histórico', async () => {
     const created = await request(app).post(`${BASE}/employees`).set(ADMIN_HEADERS).send({
       name: 'Marília Duarte',

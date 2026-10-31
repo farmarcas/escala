@@ -6,6 +6,7 @@ import {
   searchQuery,
   uuidParam,
 } from '../../shared/http/request-schemas.js';
+import { listOf } from '../../shared/http/list-filters.js';
 import { cnpjSchema } from '../economic-groups/economic-groups.schemas.js';
 
 export const partnerTypeSchema = z.enum(['INDUSTRY', 'DISTRIBUTOR']);
@@ -101,8 +102,9 @@ export type UpdateContactInput = z.infer<typeof updateContactSchema>;
 export const listPartnersQuery = z
   .object({
     ...paginationShape,
-    type: partnerTypeSchema.optional(),
-    status: partnerStatusSchema.optional(),
+    // "+ Filtro": cada campo aceita vários valores separados por vírgula.
+    type: listOf(partnerTypeSchema.options),
+    status: listOf(partnerStatusSchema.options),
     search: searchQuery,
   })
   .strict();
@@ -112,6 +114,11 @@ export type PartnerFilter = Omit<ListPartnersQuery, 'page' | 'pageSize'>;
 const contactParams = z.object({ id: z.string().uuid(), contactId: z.string().uuid() }).strict();
 
 export const listPartnersRequest = requestSchema({ query: listPartnersQuery });
+export const PARTNER_FACET_FIELDS = ['type', 'status'] as const;
+export type PartnerFacetField = (typeof PARTNER_FACET_FIELDS)[number];
+export const partnerFacetsRequest = requestSchema({
+  query: listPartnersQuery.extend({ field: z.enum(PARTNER_FACET_FIELDS) }),
+});
 export const partnerStatsRequest = requestSchema({});
 export const getPartnerRequest = requestSchema({ params: uuidParam });
 export const createPartnerRequest = requestSchema({ body: createPartnerSchema });

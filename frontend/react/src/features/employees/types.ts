@@ -33,14 +33,6 @@ export type EmployeeStats = {
   admins: number;
 };
 
-export type EmployeesFilter = {
-  search: string;
-  area: string;
-  accessRole: string;
-  status: string;
-  page: number;
-};
-
 export type EmployeeInput = {
   name: string;
   email: string;
