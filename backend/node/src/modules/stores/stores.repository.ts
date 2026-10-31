@@ -126,6 +126,7 @@ const whereOf = (filter: StoreFilter): Prisma.StoreWhereInput => {
   if (Object.keys(group).length > 0) where.economicGroup = group;
   if (filter.brandId) where.brandId = filter.brandId;
   if (filter.stage) where.stage = filter.stage;
+  if (filter.codes) where.code = { in: filter.codes };
   if (filter.blocked) where.blockedAt = filter.blocked === 'true' ? { not: null } : null;
   if (filter.uf) where.uf = filter.uf;
   if (filter.search) {
@@ -216,7 +217,7 @@ const historyOf = (
 });
 
 export const storesRepository: StoresRepository = {
-  list(actor, filter, page, pageSize) {
+  list(actor, filter, page, pageSize, options = {}) {
     return withActor(actor, async (tx) => {
       const where = whereOf(filter);
       const ids = await governanceIds(tx, filter);
@@ -229,10 +230,14 @@ export const storesRepository: StoresRepository = {
         take: pageSize,
       });
       const total = await tx.store.count({ where });
-      const missing = await missingFieldsByStore(
-        tx,
-        rows.map((row) => row.id),
-      );
+      // A exportação não precisa da lista de campos que faltam (é a conta mais cara).
+      const missing =
+        options.withMissing === false
+          ? new Map<string, string[]>()
+          : await missingFieldsByStore(
+              tx,
+              rows.map((row) => row.id),
+            );
       return {
         data: rows.map((row) => {
           const record = toRecord(row);
@@ -396,6 +401,32 @@ export const storesRepository: StoresRepository = {
       await recordAudit(tx, actor, audit);
       await addHistory(tx, [historyOf(actor, id, store.economicGroupId, audit, history)]);
       return requireOne(tx, id);
+    });
+  },
+
+  findByCodes(actor, codes) {
+    return withActor(actor, async (tx) => {
+      const rows = await tx.store.findMany({
+        where: { code: { in: codes }, deletedAt: null },
+        select: storeSelect(),
+      });
+      return rows.map(toRecord);
+    });
+  },
+
+  // Lote: uma transação, um registro na auditoria do grupo de cada loja (spec 003, FR-071).
+  setBlockMany(actor, ids, block, auditOf, history) {
+    return withActor(actor, async (tx) => {
+      for (const id of ids) {
+        const store = await tx.store.update({
+          where: { id },
+          data: block ?? { blockedAt: null, blockedReason: null, blockedBy: null },
+          select: { economicGroupId: true, code: true, name: true },
+        });
+        const audit = { ...auditOf(store), economicGroupId: store.economicGroupId };
+        await recordAudit(tx, actor, audit);
+        await addHistory(tx, [historyOf(actor, id, store.economicGroupId, audit, history)]);
+      }
     });
   },
 

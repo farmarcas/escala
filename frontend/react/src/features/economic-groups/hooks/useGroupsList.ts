@@ -31,16 +31,15 @@ export function useGroupsList() {
   const [filter, setFilter] = useState<GroupsFilter>(() => initialFilter(params));
   const search = useDebouncedValue(filter.search.trim());
 
-  const path = `/economic-groups${buildQuery({
-    page: filter.page,
-    pageSize: PAGE_SIZE,
+  const filters = {
     status: filter.status === 'all' ? undefined : filter.status,
     search,
     uf: filter.uf,
     brandId: filter.brandId,
     angelId: filter.angel && filter.angel !== NO_ANGEL_FILTER ? filter.angel : undefined,
     withoutAngel: filter.angel === NO_ANGEL_FILTER ? 'true' : undefined,
-  })}`;
+  };
+  const path = `/economic-groups${buildQuery({ ...filters, page: filter.page, pageSize: PAGE_SIZE })}`;
   const list = useApiQuery<Paginated<GroupSummary>>(path);
   const stats = useApiQuery<GroupStats>('/economic-groups/stats');
 
@@ -49,6 +48,8 @@ export function useGroupsList() {
     setFilter((current) => ({ ...current, ...patch, page: 1 }));
 
   return {
+    // Exportar CSV: os mesmos filtros da lista, sem paginação.
+    exportPath: `/economic-groups/export${buildQuery(filters)}`,
     filter,
     updateFilter,
     setPage: (page: number) => setFilter((current) => ({ ...current, page })),

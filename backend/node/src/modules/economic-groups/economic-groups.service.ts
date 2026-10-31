@@ -1,3 +1,5 @@
+import { maskCpf } from '../../shared/br/cpf.js';
+import { assertExportSize, EXPORT_LIMIT } from '../../shared/http/csv.js';
 import { generatePseudonym } from '../../shared/br/pseudonym.js';
 import { ConflictError } from '../../shared/errors/conflict-error.js';
 import { NotFoundError } from '../../shared/errors/not-found-error.js';
@@ -5,11 +7,13 @@ import { splitBulk } from '../../shared/bulk.js';
 import { isPlatformAdmin, type PlatformIdentity } from '../../shared/identity/identity.js';
 import type { AuditEntry, AuditEventView } from '../audit/audit.types.js';
 import type {
+  BenefitCardInput,
   BulkAngelInput,
   CreateGroupInput,
   GroupStatusValue,
   ListGroupsQuery,
   OwnerInput,
+  OwnerTransferInput,
   SetAngelInput,
   StatusChangeInput,
   UpdateGroupInput,
@@ -43,7 +47,18 @@ export type GroupSummaryRecord = {
   outdatedStores: number;
 };
 
+// Cartão Alelo do grupo: dados pessoais do titular só para o administrador.
+export type BenefitCardRecord = {
+  holderName: string;
+  holderCpf: string;
+  holderBirthDate: Date;
+  holderPseudonym: string;
+  cardNumber: string;
+  store: { id: string; code: number; name: string; status: string };
+};
+
 export type GroupDetailRecord = GroupSummaryRecord & {
+  benefitCard: BenefitCardRecord | null;
   cnpj: string;
   activeStores: number;
   inactiveStores: number;
@@ -135,6 +150,27 @@ export type EconomicGroupsRepository = {
   findAngelTargets: (actor: PlatformIdentity, numbers: number[]) => Promise<AngelTarget[]>;
   // Grava todas as trocas numa transação, cada uma com o seu registro na auditoria do grupo.
   assignAngels: (actor: PlatformIdentity, assignments: AngelAssignment[]) => Promise<void>;
+  // O proprietário atual sai (exclusão lógica) e o novo entra, na mesma transação.
+  transferOwner: (
+    actor: PlatformIdentity,
+    groupId: string,
+    owner: OwnerInput & { pseudonym: string },
+    audit: AuditDraft,
+  ) => Promise<GroupDetailRecord>;
+  findStoreInGroup: (
+    actor: PlatformIdentity,
+    groupId: string,
+    code: number,
+  ) => Promise<{ id: string; status: string } | null>;
+  saveBenefitCard: (
+    actor: PlatformIdentity,
+    groupId: string,
+    card: Omit<BenefitCardRecord, 'store' | 'holderBirthDate'> & {
+      holderBirthDate: string;
+      storeId: string;
+    },
+    audit: AuditDraft,
+  ) => Promise<GroupDetailRecord>;
 };
 
 export type OwnerView = { pseudonym: string; name?: string; email?: string; phone?: string };
@@ -163,9 +199,29 @@ export const toGroupSummaryView = (actor: PlatformIdentity, group: GroupSummaryR
   return { ...rest, owner: toOwnerView(actor, owner), badges: badgesOf(group) };
 };
 
+// O número do cartão nunca sai inteiro; CPF mascarado e nascimento só para o administrador.
+export const toBenefitCardView = (actor: PlatformIdentity, card: BenefitCardRecord | null) => {
+  if (!card) return null;
+  const store = { code: card.store.code, name: card.store.name, status: card.store.status };
+  if (!isPlatformAdmin(actor)) return { holderPseudonym: card.holderPseudonym, store };
+  return {
+    holderPseudonym: card.holderPseudonym,
+    holderName: card.holderName,
+    holderCpfMasked: maskCpf(card.holderCpf),
+    holderBirthDate: card.holderBirthDate.toISOString().slice(0, 10),
+    cardLast4: card.cardNumber.slice(-4),
+    store,
+  };
+};
+
 export const toGroupDetailView = (actor: PlatformIdentity, group: GroupDetailRecord) => {
-  const { id: _id, owner, ...rest } = group;
-  return { ...rest, owner: toOwnerView(actor, owner), badges: badgesOf(group) };
+  const { id: _id, owner, benefitCard, ...rest } = group;
+  return {
+    ...rest,
+    owner: toOwnerView(actor, owner),
+    benefitCard: toBenefitCardView(actor, benefitCard),
+    badges: badgesOf(group),
+  };
 };
 
 const TRANSITIONS: Record<
@@ -255,6 +311,19 @@ export const makeEconomicGroupsService = (repo: EconomicGroupsRepository) => {
 
     stats(actor: PlatformIdentity) {
       return repo.stats(actor);
+    },
+
+    // Todas as linhas filtradas, com a mesma pseudonimização da tela (spec 003, FR-073).
+    async exportRows(actor: PlatformIdentity, query: ListGroupsQuery) {
+      const { page: _page, pageSize: _pageSize, ...filter } = query;
+      const { data, total } = await repo.list(
+        actor,
+        { ...filter, searchOwnerName: isPlatformAdmin(actor) },
+        1,
+        EXPORT_LIMIT,
+      );
+      assertExportSize(total);
+      return data.map((group) => toGroupSummaryView(actor, group));
     },
 
     async get(actor: PlatformIdentity, number: number) {
@@ -366,6 +435,70 @@ export const makeEconomicGroupsService = (repo: EconomicGroupsRepository) => {
         })),
       );
       return { changed: toChange.length, skipped };
+    },
+
+    // Trocar a pessoa dona do grupo: código novo, histórico só com códigos (spec 003, US5).
+    async transferOwner(actor: PlatformIdentity, number: number, input: OwnerTransferInput) {
+      const current = await requireGroup(actor, number);
+      if (current.status === 'ARCHIVED') {
+        throw new ConflictError(
+          'Grupo arquivado não muda de proprietário. Restaure o grupo antes.',
+          'GROUP_ARCHIVED',
+        );
+      }
+      if (!current.owner) {
+        throw new ConflictError(
+          'O grupo não tem proprietário. Cadastre em Editar grupo.',
+          'GROUP_HAS_NO_OWNER',
+        );
+      }
+      const { justification, ...owner } = input;
+      const pseudonym = generatePseudonym();
+      const updated = await repo.transferOwner(
+        actor,
+        current.id,
+        { ...owner, pseudonym },
+        {
+          action: 'OWNER_TRANSFERRED',
+          summary: `Titularidade transferida de ${current.owner.pseudonym} para ${pseudonym}`,
+          justification,
+        },
+      );
+      return toGroupDetailView(actor, updated);
+    },
+
+    // Cartão Alelo (spec 003, US6): loja ativa do mesmo grupo; trocar de titular gera código novo.
+    async setBenefitCard(actor: PlatformIdentity, number: number, input: BenefitCardInput) {
+      const current = await requireGroup(actor, number);
+      if (current.status === 'ARCHIVED') throw archivedGroup();
+      const store = await repo.findStoreInGroup(actor, current.id, input.storeCode);
+      if (!store) {
+        throw new ConflictError('A loja escolhida não é deste grupo', 'STORE_NOT_IN_GROUP');
+      }
+      if (store.status !== 'ACTIVE') {
+        throw new ConflictError('O cartão só pode ficar com uma loja ativa', 'STORE_NOT_ACTIVE');
+      }
+      const previous = current.benefitCard;
+      const holderChanged = !previous || previous.holderCpf !== input.holderCpf;
+      const pseudonym = holderChanged ? generatePseudonym() : previous.holderPseudonym;
+      const { storeCode: _storeCode, ...card } = input;
+      const updated = await repo.saveBenefitCard(
+        actor,
+        current.id,
+        { ...card, holderPseudonym: pseudonym, storeId: store.id },
+        !previous
+          ? {
+              action: 'BENEFIT_CARD_CREATED',
+              summary: `Cartão Alelo cadastrado (titular ${pseudonym})`,
+            }
+          : holderChanged
+            ? {
+                action: 'BENEFIT_CARD_HOLDER_CHANGED',
+                summary: `Titular do Cartão Alelo trocado de ${previous.holderPseudonym} para ${pseudonym}`,
+              }
+            : { action: 'BENEFIT_CARD_UPDATED', summary: 'Cartão Alelo alterado' },
+      );
+      return toGroupDetailView(actor, updated);
     },
 
     async listAudit(actor: PlatformIdentity, number: number, page: number, pageSize: number) {

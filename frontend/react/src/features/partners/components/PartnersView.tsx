@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ExportCsvButton } from '@/components/ui/ExportCsvButton';
 import { KpiCard, KpiGrid } from '@/components/ui/KpiCard';
 import { Pagination } from '@/components/ui/Pagination';
 import { SearchField } from '@/components/ui/SearchField';
@@ -36,7 +37,12 @@ export function PartnersView({ canEdit }: PartnersViewProps) {
       <PageHeader
         title="Parceiros"
         description="Indústrias e distribuidores com quem a Farmarcas trabalha, com os contatos comerciais de cada um."
-        actions={canEdit && <Button onClick={() => setIsFormOpen(true)}>Novo parceiro</Button>}
+        actions={
+          <>
+            <ExportCsvButton path={list.exportPath} fileName="parceiros" />
+            {canEdit && <Button onClick={() => setIsFormOpen(true)}>Novo parceiro</Button>}
+          </>
+        }
       />
 
       <KpiGrid className="sm:grid-cols-2 xl:grid-cols-4">

@@ -115,7 +115,7 @@ function GroupFormDialog({ group, onClose, onCreate, onUpdate }: GroupFormModalP
             <p className="text-sm font-semibold">Proprietário</p>
             <p className="text-xs text-muted-foreground">
               {isOwnerLocked
-                ? 'Para trocar o proprietário, use Transferir titularidade (em desenvolvimento). A troca pede justificativa e gera um novo código para a nova pessoa.'
+                ? 'Para trocar o proprietário, use Transferir titularidade, no detalhe do grupo. A troca pede justificativa e gera um novo código para a nova pessoa.'
                 : 'Departamento Sócio · primeiro administrador do grupo. Opcional: sem ele, o grupo fica com o selo “Sem proprietário”.'}
             </p>
           </div>

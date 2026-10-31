@@ -31,7 +31,29 @@ export type GroupSummary = {
   badges: GroupBadge[];
 };
 
+// Cartão Alelo: o administrador recebe titular, CPF mascarado, nascimento e os 4 últimos
+// dígitos; o analista, só o código do titular. O número inteiro nunca chega à tela.
+export type BenefitCard = {
+  holderPseudonym: string;
+  holderName?: string;
+  holderCpfMasked?: string;
+  holderBirthDate?: string;
+  cardLast4?: string;
+  store: { code: number; name: string; status: string };
+};
+
+export type BenefitCardInput = {
+  holderName: string;
+  holderCpf: string;
+  holderBirthDate: string;
+  cardNumber: string;
+  storeCode: number;
+};
+
+export type OwnerTransferInput = OwnerInput & { justification: string };
+
 export type GroupDetail = GroupSummary & {
+  benefitCard: BenefitCard | null;
   cnpj: string;
   activeStores: number;
   inactiveStores: number;

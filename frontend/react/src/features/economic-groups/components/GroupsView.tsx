@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ExportCsvButton } from '@/components/ui/ExportCsvButton';
 import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/States';
 import { TableFooter } from '@/components/ui/Table';
@@ -68,7 +69,12 @@ export function GroupsView({ canEdit }: GroupsViewProps) {
       <PageHeader
         title="Grupos econômicos"
         description="Cadastro de cada GE. O tenant é o próprio GE: lojas, proprietário e auditoria ficam no detalhe do grupo."
-        actions={canEdit && <Button onClick={() => setIsFormOpen(true)}>Novo grupo</Button>}
+        actions={
+          <>
+            <ExportCsvButton path={list.exportPath} fileName="grupos" />
+            {canEdit && <Button onClick={() => setIsFormOpen(true)}>Novo grupo</Button>}
+          </>
+        }
       />
 
       <GroupsKpis stats={list.stats} />

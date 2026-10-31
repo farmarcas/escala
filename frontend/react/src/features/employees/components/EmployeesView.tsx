@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ExportCsvButton } from '@/components/ui/ExportCsvButton';
 import { Pagination } from '@/components/ui/Pagination';
 import { SearchField } from '@/components/ui/SearchField';
 import { SelectField } from '@/components/ui/SelectField';
@@ -35,7 +36,12 @@ export function EmployeesView({ canEdit }: EmployeesViewProps) {
       <PageHeader
         title="Funcionários"
         description="Pessoas da Farmarcas que usam a Radar Suite. O Anjo de cada grupo vem daqui; os funcionários das farmácias ficam com cada grupo."
-        actions={canEdit && <Button onClick={() => setIsFormOpen(true)}>Novo funcionário</Button>}
+        actions={
+          <>
+            <ExportCsvButton path={list.exportPath} fileName="funcionarios" />
+            {canEdit && <Button onClick={() => setIsFormOpen(true)}>Novo funcionário</Button>}
+          </>
+        }
       />
 
       <EmployeesKpis stats={list.stats} />

@@ -365,13 +365,13 @@ A aba **Histórico** junta tudo: edições, solicitações, documentos, validaç
 - **Identidade**: a visão do grupo usa o papel de demonstração "Proprietário do grupo", como a Farmarcas em 001, porque login ainda é lacuna. Esse papel corresponde a `TENANT_ADMIN` do grupo escolhido. Outros papéis do grupo (`TENANT_USER`, `REGISTRY_MANAGER`) ficam para o módulo Cadastros do grupo.
 - **Área do grupo nesta entrega**: só "Minhas lojas" e a página da loja, com o visual da suíte do tenant (menu escuro e ação azul). O resto da suíte (Cadastros, Verbas, Escala) fica fora.
 - **Fora desta entrega**:
-  - Anjo Farmarcas e o menu Funcionários do Backoffice, que listará os funcionários **da Farmarcas** (especificação própria);
+  - Anjo Farmarcas e o menu Funcionários do Backoffice, que listará os funcionários **da Farmarcas** (especificação própria; entregue na spec 003);
   - farmacêutico e gerente, que são funcionários **do grupo** (módulo Cadastros do grupo);
   - aba de convites de usuários;
   - integrações reais da aba Sistemas (ERP, Cartão Alelo, Portal Farmarcas);
   - validação automática na Receita (a etapa "sistema" é concluída à mão pela Farmarcas);
   - notificações por e-mail (avisos aparecem só na página e no histórico);
-  - situação da loja (Prospecção, Montagem, Inaugurada), bloqueio, filtro por anjo e lojas sem GE da lista do protótipo;
+  - situação da loja (Prospecção, Montagem, Inaugurada), bloqueio, filtro por anjo e lojas sem GE da lista do protótipo (etapa, bloqueio e filtro por Anjo entregues na spec 003; lojas sem GE seguem fora);
   - fila geral de solicitações no Backoffice (a lista de Lojas filtra por "com solicitação").
 - **Troca de CNPJ**: segue o protótipo (solicitação com etapas). A recomendação do M1 (C-D2) de tratar como encerramento e abertura fica registrada como ponto a validar.
 - **Catálogos e valores de negociação**: exemplos do protótipo, a validar com as áreas. Nesta entrega, a Farmarcas não tem tela para editar catálogos; eles vêm prontos.

@@ -1,7 +1,13 @@
 import { useCallback } from 'react';
 import { api } from '@/lib/api';
 import { useApiQuery } from '@/hooks/useApiQuery';
-import type { GroupDetail, GroupInput, StatusAction } from '../types';
+import type {
+  BenefitCardInput,
+  GroupDetail,
+  GroupInput,
+  OwnerTransferInput,
+  StatusAction,
+} from '../types';
 
 export function useGroupDetail(number: number | null) {
   const detail = useApiQuery<GroupDetail>(number ? `/economic-groups/${number}` : null);
@@ -37,7 +43,27 @@ export function useGroupDetail(number: number | null) {
     [number, reload],
   );
 
+  const transferOwner = useCallback(
+    async (input: OwnerTransferInput) => {
+      if (!number) return;
+      await api.post<GroupDetail>(`/economic-groups/${number}/owner-transfer`, input);
+      reload();
+    },
+    [number, reload],
+  );
+
+  const setBenefitCard = useCallback(
+    async (input: BenefitCardInput) => {
+      if (!number) return;
+      await api.put<GroupDetail>(`/economic-groups/${number}/benefit-card`, input);
+      reload();
+    },
+    [number, reload],
+  );
+
   return {
+    transferOwner,
+    setBenefitCard,
     setAngel,
     group: detail.data,
     isLoading: detail.isLoading && !detail.data,

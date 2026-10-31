@@ -6,6 +6,8 @@ import { Tabs } from '@/components/ui/Tabs';
 import { useGroupDetail } from '../hooks/useGroupDetail';
 import type { GroupTabContext, StatusAction } from '../types';
 import { AngelPickerModal } from './AngelPickerModal';
+import { BenefitCardModal } from './BenefitCardModal';
+import { OwnerTransferModal } from './OwnerTransferModal';
 import { GroupFormModal } from './GroupFormModal';
 import { GroupHeader } from './GroupHeader';
 import { GroupSummaryCards } from './GroupSummaryCards';
@@ -27,9 +29,20 @@ export function GroupDetailView({
   renderStores,
   renderAudit,
 }: GroupDetailViewProps) {
-  const { group, isLoading, error, reload, update, changeStatus, setAngel } =
-    useGroupDetail(number);
+  const {
+    group,
+    isLoading,
+    error,
+    reload,
+    update,
+    changeStatus,
+    setAngel,
+    transferOwner,
+    setBenefitCard,
+  } = useGroupDetail(number);
   const [isPickingAngel, setIsPickingAngel] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [isEditingCard, setIsEditingCard] = useState(false);
   const [tab, setTab] = useState<DetailTab>('stores');
   const [isEditing, setIsEditing] = useState(false);
   const [statusAction, setStatusAction] = useState<StatusAction | null>(null);
@@ -79,6 +92,20 @@ export function GroupDetailView({
         group={group}
         canEdit={canEdit}
         onChooseAngel={() => setIsPickingAngel(true)}
+        onTransferOwner={() => setIsTransferring(true)}
+        onEditCard={() => setIsEditingCard(true)}
+      />
+      <OwnerTransferModal
+        group={group}
+        isOpen={isTransferring}
+        onClose={() => setIsTransferring(false)}
+        onConfirm={transferOwner}
+      />
+      <BenefitCardModal
+        group={group}
+        isOpen={isEditingCard}
+        onClose={() => setIsEditingCard(false)}
+        onSave={setBenefitCard}
       />
       <AngelPickerModal
         isOpen={isPickingAngel}

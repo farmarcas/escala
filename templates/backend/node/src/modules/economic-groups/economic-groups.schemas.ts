@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { isValidCnpj, onlyDigits } from '../../shared/br/cnpj.js';
+import { isValidCpf } from '../../shared/br/cpf.js';
 import { UFS } from '../../shared/br/uf.js';
 import { paginationShape, requestSchema, searchQuery } from '../../shared/http/request-schemas.js';
 
@@ -88,7 +89,38 @@ export const bulkAngelSchema = z
   .strict();
 export type BulkAngelInput = z.infer<typeof bulkAngelSchema>;
 
+// Transferir a titularidade (spec 003, US5): nova pessoa + justificativa.
+export const ownerTransferSchema = ownerSchema
+  .extend({ justification: z.string().trim().min(5, 'Explique o motivo').max(500) })
+  .strict();
+export type OwnerTransferInput = z.infer<typeof ownerTransferSchema>;
+
+// Cartão Alelo (spec 003, US6). CPF, nascimento e número são dados pessoais.
+export const benefitCardSchema = z
+  .object({
+    holderName: z.string().trim().min(3).max(120),
+    holderCpf: z.string().transform(onlyDigits).refine(isValidCpf, { message: 'CPF inválido' }),
+    holderBirthDate: z.iso.date().refine((value) => value < new Date().toISOString().slice(0, 10), {
+      message: 'A data de nascimento precisa estar no passado',
+    }),
+    cardNumber: z
+      .string()
+      .transform(onlyDigits)
+      .pipe(z.string().regex(/^\d{13,19}$/, 'O número do cartão tem de 13 a 19 dígitos')),
+    storeCode: z.number().int().positive(),
+  })
+  .strict();
+export type BenefitCardInput = z.infer<typeof benefitCardSchema>;
+
 export const listGroupsRequest = requestSchema({ query: listGroupsQuery });
+export const ownerTransferRequest = requestSchema({
+  body: ownerTransferSchema,
+  params: groupNumberParam,
+});
+export const benefitCardRequest = requestSchema({
+  body: benefitCardSchema,
+  params: groupNumberParam,
+});
 export const setAngelRequest = requestSchema({ body: setAngelSchema, params: groupNumberParam });
 export const bulkAngelRequest = requestSchema({ body: bulkAngelSchema });
 export const groupStatsRequest = requestSchema({});

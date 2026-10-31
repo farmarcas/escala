@@ -234,6 +234,7 @@ model EconomicGroup {
   owners          GroupOwner[]
   stores          Store[]
   auditEvents     AuditEvent[]
+  benefitCard     GroupBenefitCard?
 
   @@index([angelEmployeeId])
   @@map("economic_groups")
@@ -324,6 +325,7 @@ model Store {
   deletedAt            DateTime?            @map("deleted_at") @db.Timestamptz(3)
   createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  benefitCards         GroupBenefitCard[]
   changeRequests       StoreChangeRequest[]
   documents            StoreDocument[]
   history              StoreHistory[]
@@ -610,4 +612,23 @@ model PartnerContact {
 
   @@index([partnerId])
   @@map("partner_contacts")
+}
+
+// Cartão Alelo do grupo (um por grupo), vinculado a uma loja ativa do mesmo grupo.
+// CPF, nascimento e número só para o administrador; o número nunca sai inteiro da API.
+model GroupBenefitCard {
+  id              String        @id @default(uuid(7)) @db.Uuid
+  economicGroupId String        @unique @map("economic_group_id") @db.Uuid
+  economicGroup   EconomicGroup @relation(fields: [economicGroupId], references: [id])
+  storeId         String        @map("store_id") @db.Uuid
+  store           Store         @relation(fields: [storeId], references: [id])
+  holderName      String        @map("holder_name")
+  holderCpf       String        @map("holder_cpf") @db.Char(11)
+  holderBirthDate DateTime      @map("holder_birth_date") @db.Date
+  holderPseudonym String        @unique @map("holder_pseudonym")
+  cardNumber      String        @map("card_number")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("group_benefit_cards")
 }

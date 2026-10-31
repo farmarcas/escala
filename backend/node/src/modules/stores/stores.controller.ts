@@ -1,15 +1,18 @@
 import type { Request, Response } from 'express';
 import type { z } from 'zod';
+import { sendCsv, toCsv } from '../../shared/http/csv.js';
 import { readPlatformIdentity } from '../../shared/identity/authenticate.js';
 import { readValidated } from '../../shared/middlewares/validate.js';
 import type {
   blockChangeRequest,
+  bulkBlockRequest,
   createGroupStoreRequest,
   listGroupStoresRequest,
   listStoresRequest,
   stageChangeRequest,
   updateStoreRequest,
 } from './stores.schemas.js';
+import { STORE_CSV_COLUMNS } from './stores.csv.js';
 import type { StoresService } from './stores.service.js';
 
 export const makeStoresController = (service: StoresService) => ({
@@ -44,6 +47,17 @@ export const makeStoresController = (service: StoresService) => ({
     res.json(
       await service.setBlock(readPlatformIdentity(req), params.code, false, body.justification),
     );
+  },
+
+  async bulkBlock(req: Request, res: Response) {
+    const { body } = readValidated<z.infer<typeof bulkBlockRequest>>(res);
+    res.json(await service.bulkBlock(readPlatformIdentity(req), body));
+  },
+
+  async exportCsv(req: Request, res: Response) {
+    const { query } = readValidated<z.infer<typeof listStoresRequest>>(res);
+    const rows = await service.exportRows(readPlatformIdentity(req), query);
+    sendCsv(res, 'lojas', toCsv(STORE_CSV_COLUMNS, rows));
   },
 
   async listByGroup(req: Request, res: Response) {

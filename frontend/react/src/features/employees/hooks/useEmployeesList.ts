@@ -18,6 +18,7 @@ export function useEmployeesList() {
   const stats = useApiQuery<EmployeeStats>('/employees/stats');
 
   return {
+    exportPath: `/employees/export${buildQuery({ ...filter, page: undefined, search })}`,
     filter,
     // Mudar qualquer filtro volta para a primeira página.
     updateFilter: (patch: Partial<Omit<EmployeesFilter, 'page'>>) =>

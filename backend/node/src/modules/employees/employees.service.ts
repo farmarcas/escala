@@ -1,5 +1,6 @@
 import { ConflictError } from '../../shared/errors/conflict-error.js';
 import { NotFoundError } from '../../shared/errors/not-found-error.js';
+import { assertExportSize, EXPORT_LIMIT } from '../../shared/http/csv.js';
 import type { PlatformIdentity } from '../../shared/identity/identity.js';
 import type { AuditEntry, AuditEventView } from '../audit/audit.types.js';
 import { statusTransition } from './employee-status.js';
@@ -112,6 +113,12 @@ export const makeEmployeesService = (repo: EmployeesRepository) => {
 
     stats(actor: PlatformIdentity) {
       return repo.stats(actor);
+    },
+
+    async exportRows(actor: PlatformIdentity, filter: EmployeeFilter) {
+      const { data, total } = await repo.list(actor, filter, 1, EXPORT_LIMIT);
+      assertExportSize(total);
+      return data;
     },
 
     get: requireEmployee,

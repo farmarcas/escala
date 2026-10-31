@@ -7,6 +7,7 @@ import type { GroupStatusValue } from '../economic-groups/economic-groups.schema
 import type {
   CreateStoreInput,
   ListStoresQuery,
+  BulkBlockInput,
   StageChangeInput,
   StoreFilter,
   StoreStatusValue,
@@ -14,6 +15,8 @@ import type {
   UpdateStoreInput,
 } from './stores.schemas.js';
 import { STAGE_LABEL, stageChange, type StoreStageValue } from './stage.js';
+import { splitBulk } from '../../shared/bulk.js';
+import { assertExportSize, EXPORT_LIMIT } from '../../shared/http/csv.js';
 
 export type StoreRecord = {
   id: string;
@@ -69,7 +72,16 @@ export type StoresRepository = {
     filter: StoreFilter,
     page: number,
     pageSize: number,
+    options?: { withMissing?: boolean },
   ) => Promise<{ data: StoreRecord[]; total: number }>;
+  findByCodes: (actor: PlatformIdentity, codes: number[]) => Promise<StoreRecord[]>;
+  setBlockMany: (
+    actor: PlatformIdentity,
+    ids: string[],
+    block: { blockedAt: Date; blockedReason: string; blockedBy: string } | null,
+    auditOf: (store: { code: number; name: string }) => Omit<AuditEntry, 'economicGroupId'>,
+    history: StoreHistoryChange,
+  ) => Promise<void>;
   stats: (actor: Identity) => Promise<StoreStats>;
   findById: (actor: PlatformIdentity, id: string) => Promise<StoreRecord | null>;
   findGroup: (
@@ -226,6 +238,43 @@ export const makeStoresService = (repo: StoresRepository) => ({
         newValue: BLOCK_LABEL[String(block) as 'true' | 'false'],
       },
     );
+  },
+
+  async bulkBlock(actor: PlatformIdentity, input: BulkBlockInput) {
+    const codes = [...new Set(input.codes)];
+    const block = input.action === 'BLOCK';
+    const found = await repo.findByCodes(actor, codes);
+    const { toChange, skipped } = splitBulk(
+      codes.length,
+      found,
+      (store) => store.isBlocked !== block,
+    );
+    await repo.setBlockMany(
+      actor,
+      toChange.map((store) => store.id),
+      block
+        ? { blockedAt: new Date(), blockedReason: input.justification, blockedBy: actor.subject }
+        : null,
+      (store) => ({
+        action: block ? 'STORE_BLOCKED' : 'STORE_UNBLOCKED',
+        summary: `Loja ${formatStoreCode(store.code)} · ${store.name} ${block ? 'bloqueada' : 'desbloqueada'} em lote`,
+        justification: input.justification,
+      }),
+      {
+        fieldLabel: 'Bloqueio',
+        oldValue: block ? 'Desbloqueada' : 'Bloqueada',
+        newValue: block ? 'Bloqueada' : 'Desbloqueada',
+      },
+    );
+    return { changed: toChange.length, skipped };
+  },
+
+  // Todas as linhas filtradas, sem paginação (até EXPORT_LIMIT).
+  async exportRows(actor: PlatformIdentity, query: ListStoresQuery) {
+    const { page: _page, pageSize: _pageSize, ...filter } = query;
+    const { data, total } = await repo.list(actor, filter, 1, EXPORT_LIMIT, { withMissing: false });
+    assertExportSize(total);
+    return data;
   },
 
   async updateStatus(actor: PlatformIdentity, id: string, input: UpdateStoreInput) {

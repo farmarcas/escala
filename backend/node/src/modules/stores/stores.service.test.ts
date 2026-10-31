@@ -66,6 +66,8 @@ const makeRepo = (overrides: Partial<StoresRepository> = {}): StoresRepository =
   findByCode: vi.fn().mockResolvedValue(store()),
   updateStage: vi.fn().mockResolvedValue(store()),
   setBlock: vi.fn().mockResolvedValue(store()),
+  findByCodes: vi.fn().mockResolvedValue([]),
+  setBlockMany: vi.fn(),
   ...overrides,
 });
 
@@ -189,5 +191,27 @@ describe('stores service · etapa e bloqueio', () => {
     await expect(
       makeStoresService(blocked).setBlock(admin, 92, true, 'De novo'),
     ).rejects.toMatchObject({ code: 'STORE_ALREADY_BLOCKED' });
+  });
+});
+
+describe('stores service · lote', () => {
+  it('deve bloquear só as que ainda não estão bloqueadas e contar as puladas', async () => {
+    const repo = makeRepo({
+      findByCodes: vi
+        .fn()
+        .mockResolvedValue([
+          store({ id: 'a', code: 1 }),
+          store({ id: 'b', code: 2, isBlocked: true }),
+        ]),
+    });
+
+    const result = await makeStoresService(repo).bulkBlock(admin, {
+      action: 'BLOCK',
+      codes: [1, 2, 3],
+      justification: 'Pendência financeira',
+    });
+
+    expect(result).toEqual({ changed: 1, skipped: 2 });
+    expect(vi.mocked(repo.setBlockMany).mock.calls[0]?.[1]).toEqual(['a']);
   });
 });

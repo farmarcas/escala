@@ -27,6 +27,7 @@ export const partnersRouter = (repo: PartnersRepository = partnersRepository) =>
 
   router.get('/', validate(listPartnersRequest), controller.list);
   router.get('/stats', validate(partnerStatsRequest), controller.stats);
+  router.get('/export', validate(listPartnersRequest), controller.exportCsv);
   router.get('/:id', validate(getPartnerRequest), controller.get);
   router.post('/', adminOnly, validate(createPartnerRequest), controller.create);
   router.patch('/:id', adminOnly, validate(updatePartnerRequest), controller.update);

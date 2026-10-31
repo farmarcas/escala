@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ExportCsvButton } from '@/components/ui/ExportCsvButton';
 import { CompletenessCell, ValidationCell } from '@/components/ui/GovernanceCells';
 import { KpiCard, KpiGrid } from '@/components/ui/KpiCard';
 import { Pagination } from '@/components/ui/Pagination';
@@ -21,15 +23,40 @@ import {
 } from '@/lib/format';
 import { UF_OPTIONS } from '@/lib/uf';
 import { useStores } from '../hooks/useStores';
+import { StoresBulkBar, type BulkResult } from './StoresBulkBar';
 import { STAGE_OPTIONS, STORE_STAGE, STORE_STATUS, STORE_TYPE } from '../storeLabels';
 import { CompletenessDonut } from './CompletenessDonut';
 
 const share = (part: number, total: number) => (total === 0 ? 0 : (part / total) * 100);
 const percent = (part: number, total: number) => `${Math.round(share(part, total))}%`;
 
-export function StoresView() {
+const checkboxClass =
+  'size-4 cursor-pointer accent-[var(--color-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+
+type StoresViewProps = { canEdit: boolean };
+
+export function StoresView({ canEdit }: StoresViewProps) {
   const navigate = useNavigate();
   const list = useStores();
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkResult, setBulkResult] = useState<
+    (BulkResult & { action: 'BLOCK' | 'UNBLOCK' }) | null
+  >(null);
+  const pageCodes = list.stores.map((store) => store.code);
+  const isPageSelected = pageCodes.length > 0 && pageCodes.every((code) => selected.has(code));
+  const toggle = (code: number) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  const togglePage = () =>
+    setSelected((current) => {
+      const next = new Set(current);
+      pageCodes.forEach((code) => (isPageSelected ? next.delete(code) : next.add(code)));
+      return next;
+    });
   const brands = useBrandOptions();
   const angels = useEmployeeOptions();
   const stats = list.stats;
@@ -43,6 +70,7 @@ export function StoresView() {
             ? `${formatNumber(stats.total)} lojas · ${formatNumber(stats.groups)} grupos econômicos. Para cadastrar loja, abra o grupo.`
             : 'Lojas de todos os grupos econômicos.'
         }
+        actions={<ExportCsvButton path={list.exportPath} fileName="lojas" />}
       />
 
       {/* Quatro indicadores e a rosca do preenchimento, que precisa de mais largura. */}
@@ -236,6 +264,35 @@ export function StoresView() {
           )}
         </div>
 
+        {selected.size > 0 && (
+          <StoresBulkBar
+            codes={[...selected]}
+            canEdit={canEdit}
+            onClear={() => setSelected(new Set())}
+            onDone={(result) => {
+              setBulkResult(result);
+              setSelected(new Set());
+              list.reload();
+            }}
+          />
+        )}
+        {bulkResult && (
+          <div
+            role="status"
+            className="flex flex-wrap items-center gap-3 border-b border-border bg-success-soft px-5 py-3 text-[13px] text-success-text"
+          >
+            <span className="flex-1">
+              {bulkResult.action === 'BLOCK' ? 'Bloqueio' : 'Desbloqueio'} em lote:{' '}
+              {pluralize(bulkResult.changed, 'loja alterada', 'lojas alteradas')}
+              {bulkResult.skipped > 0 &&
+                ` · ${pluralize(bulkResult.skipped, 'pulada', 'puladas')} (já estavam assim)`}
+              .
+            </span>
+            <Button size="sm" variant="ghost" onClick={() => setBulkResult(null)}>
+              Fechar
+            </Button>
+          </div>
+        )}
         {list.isLoading && <LoadingState label="Carregando lojas" />}
         {list.error && !list.isLoading && (
           <ErrorState message={list.error.message} onRetry={list.reload} />
@@ -256,9 +313,18 @@ export function StoresView() {
           />
         )}
         {!list.isLoading && !list.error && list.stores.length > 0 && (
-          <Table label="Lojas da rede" minWidth="1720px">
+          <Table label="Lojas da rede" minWidth="1760px">
             <thead>
               <tr>
+                <HeaderCell className="w-10 pr-0">
+                  <input
+                    type="checkbox"
+                    aria-label="Selecionar todas as lojas da página"
+                    className={checkboxClass}
+                    checked={isPageSelected}
+                    onChange={togglePage}
+                  />
+                </HeaderCell>
                 <HeaderCell>GE</HeaderCell>
                 <HeaderCell>Marca</HeaderCell>
                 <HeaderCell>Loja</HeaderCell>
@@ -288,6 +354,20 @@ export function StoresView() {
                     onOpen={() => navigate(`/lojas/${store.code}`)}
                     openLabel={`Abrir ${store.name}`}
                   >
+                    <Cell className="w-10 pr-0">
+                      {/* Marcar não abre a loja: o clique e o Enter param aqui. */}
+                      <input
+                        type="checkbox"
+                        aria-label={`Selecionar ${store.name}`}
+                        className={checkboxClass}
+                        checked={selected.has(store.code)}
+                        onChange={() => toggle(store.code)}
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') event.stopPropagation();
+                        }}
+                      />
+                    </Cell>
                     <Cell>
                       <Link
                         to={`/grupos/${store.groupNumber}`}

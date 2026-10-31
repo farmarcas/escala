@@ -38,6 +38,7 @@ const group = (overrides: Partial<GroupDetailRecord> = {}): GroupDetailRecord =>
   ufs: ['MG', 'PR', 'SP'],
   outdatedStores: 0,
   cnpj: '41583276000100',
+  benefitCard: null,
   activeStores: 7,
   inactiveStores: 1,
   pendingStores: 0,
@@ -62,6 +63,9 @@ const makeRepo = (overrides: Partial<EconomicGroupsRepository> = {}): EconomicGr
     .mockResolvedValue({ id: 'e2', name: 'Isabela Nunes', status: 'ACTIVE' }),
   findAngelTargets: vi.fn().mockResolvedValue([]),
   assignAngels: vi.fn(),
+  transferOwner: vi.fn().mockResolvedValue(group()),
+  findStoreInGroup: vi.fn().mockResolvedValue({ id: 's1', status: 'ACTIVE' }),
+  saveBenefitCard: vi.fn().mockResolvedValue(group()),
   ...overrides,
 });
 
@@ -314,5 +318,134 @@ describe('economic groups · Anjo', () => {
         audit: { action: 'ANGEL_ASSIGNED', summary: 'Anjo definido: Isabela Nunes' },
       },
     ]);
+  });
+});
+
+describe('economic groups · titularidade', () => {
+  it('deve transferir com código novo e registrar só os códigos', async () => {
+    const repo = makeRepo();
+
+    await makeEconomicGroupsService(repo).transferOwner(admin, 417, {
+      name: 'Nova Pessoa',
+      email: 'nova@exemplo.com.br',
+      phone: '11911112222',
+      justification: 'Venda da participação',
+    });
+
+    const call = vi.mocked(repo.transferOwner).mock.calls[0];
+    const pseudonym = call?.[2].pseudonym ?? '';
+    expect(pseudonym).toMatch(PSEUDONYM_PATTERN);
+    expect(pseudonym).not.toBe('F-1A0PR');
+    expect(call?.[3]).toEqual({
+      action: 'OWNER_TRANSFERRED',
+      summary: `Titularidade transferida de F-1A0PR para ${pseudonym}`,
+      justification: 'Venda da participação',
+    });
+    expect(JSON.stringify(call?.[3])).not.toMatch(/Nova Pessoa|Carla/);
+  });
+
+  it('deve recusar grupo sem proprietário e grupo arquivado', async () => {
+    const input = {
+      name: 'X Y Z',
+      email: 'x@y.com.br',
+      phone: '11911112222',
+      justification: 'Motivo',
+    };
+    const noOwner = makeRepo({ findByNumber: vi.fn().mockResolvedValue(group({ owner: null })) });
+    const archived = makeRepo({
+      findByNumber: vi.fn().mockResolvedValue(group({ status: 'ARCHIVED' })),
+    });
+
+    await expect(
+      makeEconomicGroupsService(noOwner).transferOwner(admin, 1, input),
+    ).rejects.toMatchObject({
+      code: 'GROUP_HAS_NO_OWNER',
+    });
+    await expect(
+      makeEconomicGroupsService(archived).transferOwner(admin, 1, input),
+    ).rejects.toMatchObject({
+      code: 'GROUP_ARCHIVED',
+    });
+  });
+});
+
+describe('economic groups · Cartão Alelo', () => {
+  const card = {
+    holderName: 'Carla Mendonça',
+    holderCpf: '52998224725',
+    holderBirthDate: new Date('1980-05-20T00:00:00.000Z'),
+    holderPseudonym: 'F-ALEL0',
+    cardNumber: '6062825624254001',
+    store: { id: 's1', code: 2, name: 'Aurora Santana', status: 'ACTIVE' },
+  };
+
+  it('deve mostrar ao administrador o CPF mascarado e só os 4 últimos dígitos', async () => {
+    const repo = makeRepo({
+      findByNumber: vi.fn().mockResolvedValue(group({ benefitCard: card })),
+    });
+
+    const detail = await makeEconomicGroupsService(repo).get(admin, 417);
+
+    expect(detail.benefitCard).toEqual({
+      holderPseudonym: 'F-ALEL0',
+      holderName: 'Carla Mendonça',
+      holderCpfMasked: '529.***.***-25',
+      holderBirthDate: '1980-05-20',
+      cardLast4: '4001',
+      store: { code: 2, name: 'Aurora Santana', status: 'ACTIVE' },
+    });
+    expect(JSON.stringify(detail)).not.toContain('6062825624254001');
+  });
+
+  it('deve mostrar ao analista só o código do titular', async () => {
+    const repo = makeRepo({
+      findByNumber: vi.fn().mockResolvedValue(group({ benefitCard: card })),
+    });
+
+    const detail = await makeEconomicGroupsService(repo).get(analyst, 417);
+
+    expect(detail.benefitCard).toEqual({
+      holderPseudonym: 'F-ALEL0',
+      store: { code: 2, name: 'Aurora Santana', status: 'ACTIVE' },
+    });
+  });
+
+  const input = {
+    holderName: 'Outra Pessoa',
+    holderCpf: '11144477735',
+    holderBirthDate: '1975-01-10',
+    cardNumber: '6062825624259999',
+    storeCode: 2,
+  };
+
+  it('deve gerar código novo ao trocar o titular, sem dados pessoais na auditoria', async () => {
+    const repo = makeRepo({
+      findByNumber: vi.fn().mockResolvedValue(group({ benefitCard: card })),
+    });
+
+    await makeEconomicGroupsService(repo).setBenefitCard(admin, 417, input);
+
+    const call = vi.mocked(repo.saveBenefitCard).mock.calls[0];
+    expect(call?.[2].holderPseudonym).not.toBe('F-ALEL0');
+    expect(call?.[3].action).toBe('BENEFIT_CARD_HOLDER_CHANGED');
+    expect(JSON.stringify(call?.[3])).not.toMatch(/Outra Pessoa|11144477735|9999/);
+  });
+
+  it('deve recusar loja inativa ou de outro grupo', async () => {
+    const inactive = makeRepo({
+      findStoreInGroup: vi.fn().mockResolvedValue({ id: 's1', status: 'INACTIVE' }),
+    });
+    const other = makeRepo({ findStoreInGroup: vi.fn().mockResolvedValue(null) });
+
+    await expect(
+      makeEconomicGroupsService(inactive).setBenefitCard(admin, 417, input),
+    ).rejects.toMatchObject({
+      code: 'STORE_NOT_ACTIVE',
+    });
+    await expect(
+      makeEconomicGroupsService(other).setBenefitCard(admin, 417, input),
+    ).rejects.toMatchObject({
+      code: 'STORE_NOT_IN_GROUP',
+    });
   });
 });

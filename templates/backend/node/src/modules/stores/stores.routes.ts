@@ -5,6 +5,7 @@ import { makeStoresController } from './stores.controller.js';
 import { storesRepository } from './stores.repository.js';
 import {
   blockChangeRequest,
+  bulkBlockRequest,
   listStoresRequest,
   stageChangeRequest,
   storeStatsRequest,
@@ -21,8 +22,10 @@ export const storesRouter = (repo?: StoresRepository) => {
 
   router.get('/', validate(listStoresRequest), controller.list);
   router.get('/stats', validate(storeStatsRequest), controller.stats);
+  router.get('/export', validate(listStoresRequest), controller.exportCsv);
   const adminOnly = requirePlatformRole('PLATFORM_ADMIN');
   router.patch('/:id/status', adminOnly, validate(updateStoreRequest), controller.updateStatus);
+  router.post('/bulk', adminOnly, validate(bulkBlockRequest), controller.bulkBlock);
   // Etapa e bloqueio pelo código da loja (LJ-NNN), como a página da loja.
   router.patch('/:code/stage', adminOnly, validate(stageChangeRequest), controller.changeStage);
   router.post('/:code/block', adminOnly, validate(blockChangeRequest), controller.block);

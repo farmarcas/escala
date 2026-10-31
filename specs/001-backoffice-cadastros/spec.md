@@ -120,7 +120,7 @@ Um seletor "Papel de demonstração" no topo alterna entre Administrador da plat
 
 **Estrutura**
 
-- **FR-001**: O Backoffice MUST ter menu lateral recolhível com Visão geral, Grupos econômicos, Lojas e Marcas Farmarcas. Funcionários e Parceiros aparecem como "Em desenvolvimento", sem ação.
+- **FR-001**: O Backoffice MUST ter menu lateral recolhível com Visão geral, Grupos econômicos, Lojas e Marcas Farmarcas. Funcionários e Parceiros aparecem como "Em desenvolvimento", sem ação. (Atualizado em 2026-10-31 pela spec 003: o menu começa por Início, e Funcionários e Parceiros já estão ativos.)
 - **FR-002**: "Visão geral" MUST seguir o layout do protótipo: período, "Ver grupos econômicos", "Novo tenant", filtros por marca, UF e departamento, os 6 indicadores, Pontos de atenção e Adoção por módulo. O que o cadastro já tem vem do banco (GEs ativos e pontos de atenção do cadastro: sem proprietário, validação vencida, solicitações aguardando a Farmarcas, documentos com alerta, lojas pendentes), com filtro por marca e UF da loja. Uso, funcionários, módulos licenciados, período, departamento e "Novo tenant" aparecem como "—" ou desabilitados, com o aviso do que falta. (Ajuste pedido em 2026-10-30.)
 - **FR-003**: Todas as telas MUST ocupar toda a largura ao lado do menu (layout fluido) e seguir as regras visuais do Alquimia DS do pacote.
 - **FR-004**: O topo MUST mostrar o caminho da tela (breadcrumb) e o papel atual, com o seletor de papel de demonstração.
@@ -191,7 +191,7 @@ Um seletor "Papel de demonstração" no topo alterna entre Administrador da plat
 
 ## Assumptions
 
-- **Escopo desta entrega**: Marcas, Grupos econômicos, Lojas (cadastro básico e lista geral), ciclo de vida do grupo e auditoria. **Ficam para depois**: indicadores de uso e "saúde de uso", módulos licenciados (liberar e revogar), funcionários, convite e ativação do proprietário, transferência de titularidade, Cartão Alelo, carga inicial por arquivo, exportação em CSV, o detalhe completo da loja (governança, documentos, mobiliário, sistemas, canais, solicitações) e o módulo Gestão 360. Motivo: começar pelo menor pedaço que funciona (constituição, VII).
+- **Escopo desta entrega**: Marcas, Grupos econômicos, Lojas (cadastro básico e lista geral), ciclo de vida do grupo e auditoria. **Ficam para depois**: indicadores de uso e "saúde de uso", módulos licenciados (liberar e revogar), funcionários, convite e ativação do proprietário, transferência de titularidade, Cartão Alelo, carga inicial por arquivo, exportação em CSV, o detalhe completo da loja (governança, documentos, mobiliário, sistemas, canais, solicitações) e o módulo Gestão 360. Motivo: começar pelo menor pedaço que funciona (constituição, VII). Funcionários, transferência de titularidade, Cartão Alelo e exportação em CSV foram entregues na spec 003.
 - **Login**: o projeto ainda não tem login, que é uma lacuna conhecida. Decisão: usar o seletor "Papel de demonstração", como no protótipo. Por quê: dá para demonstrar a regra de papéis agora e trocar pelo login de verdade depois, sem mudar as telas.
 - **Cor de ação do Backoffice**: decisão: laranja `#F25C05`, como na versão mais recente do protótipo. O azul `#006FF7` fica para a suíte do associado. Por quê: é o que o protótipo atual mostra (divergência 1 do `DE-PARA.md`).
 - **"Aguardando ativação"**: depende do convite do proprietário, que está fora desta entrega. O selo não aparece agora.

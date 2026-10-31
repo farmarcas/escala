@@ -7,12 +7,14 @@ import type { StoresRepository } from '../stores/stores.service.js';
 import { makeEconomicGroupsController } from './economic-groups.controller.js';
 import { economicGroupsRepository } from './economic-groups.repository.js';
 import {
+  benefitCardRequest,
   bulkAngelRequest,
   createGroupRequest,
   getGroupRequest,
   groupStatsRequest,
   listGroupAuditRequest,
   listGroupsRequest,
+  ownerTransferRequest,
   setAngelRequest,
   statusChangeRequest,
   updateGroupRequest,
@@ -34,6 +36,7 @@ export const economicGroupsRouter = (
 
   router.get('/', validate(listGroupsRequest), controller.list);
   router.get('/stats', validate(groupStatsRequest), controller.stats);
+  router.get('/export', validate(listGroupsRequest), controller.exportCsv);
   router.post('/', adminOnly, validate(createGroupRequest), controller.create);
   router.post('/bulk-angel', adminOnly, validate(bulkAngelRequest), controller.bulkAngel);
   router.get('/:number', validate(getGroupRequest), controller.get);
@@ -45,6 +48,18 @@ export const economicGroupsRouter = (
     controller.changeStatus,
   );
   router.put('/:number/angel', adminOnly, validate(setAngelRequest), controller.setAngel);
+  router.post(
+    '/:number/owner-transfer',
+    adminOnly,
+    validate(ownerTransferRequest),
+    controller.transferOwner,
+  );
+  router.put(
+    '/:number/benefit-card',
+    adminOnly,
+    validate(benefitCardRequest),
+    controller.setBenefitCard,
+  );
   router.get('/:number/audit-events', validate(listGroupAuditRequest), controller.listAudit);
   router.get('/:number/stores', validate(listGroupStoresRequest), stores.listByGroup);
   router.post(

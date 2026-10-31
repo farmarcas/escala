@@ -60,6 +60,16 @@ export type StageChangeInput = z.infer<typeof stageChangeSchema>;
 
 export const blockChangeSchema = z.object({ justification: reason }).strict();
 
+// Ações em lote na lista de lojas (spec 003, US7).
+export const bulkBlockSchema = z
+  .object({
+    action: z.enum(['BLOCK', 'UNBLOCK']),
+    codes: z.array(z.number().int().positive()).min(1).max(200),
+    justification: reason,
+  })
+  .strict();
+export type BulkBlockInput = z.infer<typeof bulkBlockSchema>;
+
 const storeCodeParam = z.object({ code: z.coerce.number().int().positive() }).strict();
 
 const storeFilters = {
@@ -87,6 +97,12 @@ export const listStoresQuery = z
     outdated: z.enum(['true']).optional(),
     stage: storeStageSchema.optional(),
     blocked: z.enum(['true', 'false']).optional(),
+    // "Exportar selecionadas": códigos separados por vírgula (até 200).
+    codes: z
+      .string()
+      .regex(/^\d+(,\d+){0,199}$/, 'Informe os códigos separados por vírgula')
+      .transform((value) => value.split(',').map(Number))
+      .optional(),
   })
   .strict();
 export type ListStoresQuery = z.infer<typeof listStoresQuery>;
@@ -103,6 +119,7 @@ export const blockChangeRequest = requestSchema({
   body: blockChangeSchema,
   params: storeCodeParam,
 });
+export const bulkBlockRequest = requestSchema({ body: bulkBlockSchema });
 export const listGroupStoresRequest = requestSchema({
   params: groupNumberParam,
   query: listGroupStoresQuery,

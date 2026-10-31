@@ -209,69 +209,69 @@ Entrega em quatro fatias. Ao fim de cada fatia, os testes passam e a tela é con
 
 ## Phase 9: Base
 
-- [ ] T080 `schema.prisma`: model `GroupBenefitCard`.
-- [ ] T081 Migration `<ts>_backoffice_fase2_p3`:
+- [x] T080 `schema.prisma`: model `GroupBenefitCard`.
+- [x] T081 Migration `<ts>_backoffice_fase2_p3`:
   - `group_benefit_cards` com RLS de tenant;
   - CHECKs de CPF e número do cartão;
   - índice único parcial de proprietário ativo por grupo, se ainda não existir.
   - Permissões em `db-setup.ts`.
-- [ ] T082 [P] `src/shared/br/cpf.ts` + teste (validação e máscara).
-- [ ] T083 [P] `src/shared/http/csv.ts` + teste: `;`, BOM, aspas, quebras de linha, proteção contra fórmula, datas `dd/mm/aaaa`.
+- [x] T082 [P] `src/shared/br/cpf.ts` + teste (validação e máscara).
+- [x] T083 [P] `src/shared/http/csv.ts` + teste: `;`, BOM, aspas, quebras de linha, proteção contra fórmula, datas `dd/mm/aaaa`.
 
 ## Phase 10: US5 — Transferir titularidade
 
-- [ ] T090 [US5] `POST /economic-groups/:number/owner-transfer`:
+- [x] T090 [US5] `POST /economic-groups/:number/owner-transfer`:
   - service com testes unitários: sem proprietário, arquivado, pseudônimo novo;
   - repository numa transação: exclui o anterior e cria o novo;
   - auditoria "Titularidade transferida de F-… para F-…".
-- [ ] T091 [US5] Teste de integração: transferência, auditoria sem dados pessoais, analista 403.
-- [ ] T092 [P] [US5] Tela:
+- [x] T091 [US5] Teste de integração: transferência, auditoria sem dados pessoais, analista 403.
+- [x] T092 [P] [US5] Tela:
   - "Transferir titularidade" no bloco do proprietário (só admin) e `OwnerTransferModal`, com justificativa;
   - no `GroupFormModal`, a nota sobre a troca de proprietário aponta para essa ação.
 
 ## Phase 11: US6 — Cartão Alelo
 
-- [ ] T100 [US6] `PUT /economic-groups/:number/benefit-card`:
+- [x] T100 [US6] `PUT /economic-groups/:number/benefit-card`:
   - loja ativa do grupo;
   - CPF válido;
   - pseudônimo novo ao trocar de titular;
   - auditoria sem dados pessoais.
   - `benefitCard` no detalhe com a visão por papel (R11).
-- [ ] T101 [US6] Testes:
+- [x] T101 [US6] Testes:
   - unitário da visão (`cardLast4`, CPF mascarado, analista só código);
   - integração: loja de outro grupo, loja inativa, analista sem CPF nem número.
-- [ ] T102 [P] [US6] Tela:
+- [x] T102 [P] [US6] Tela:
   - seção "Informações do Cartão Alelo" no `GroupFormModal`: titular, "Alterar titular", CPF, nascimento, número e loja com busca (só ativas);
   - bloco "Cartão Alelo" no detalhe, com aviso de loja inativa;
   - visão do analista.
 
 ## Phase 12: US7 — Lote e exportação
 
-- [ ] T110 [US7] `POST /stores/bulk` (BLOCK e UNBLOCK): uma transação, um registro por loja, `{ changed, skipped }`. A regra de puladas usa `shared/bulk.ts`.
-- [ ] T111 [US7] Rotas `GET …/export` em lojas, grupos, funcionários e parceiros:
+- [x] T110 [US7] `POST /stores/bulk` (BLOCK e UNBLOCK): uma transação, um registro por loja, `{ changed, skipped }`. A regra de puladas usa `shared/bulk.ts`.
+- [x] T111 [US7] Rotas `GET …/export` em lojas, grupos, funcionários e parceiros:
   - mesmos filtros da lista;
   - visão por papel;
   - `toCsv`;
   - teto de 5.000 linhas;
   - `Content-Disposition` com data.
-- [ ] T112 [US7] Testes de integração:
+- [x] T112 [US7] Testes de integração:
   - lote com puladas;
   - CSV com BOM e `;`;
   - CSV do analista sem dado pessoal;
   - filtros respeitados.
-- [ ] T113 [P] [US7] Tela:
+- [x] T113 [P] [US7] Tela:
   - seleção na tabela de lojas, com "Selecionar todas as filtradas";
   - "Ações (N)": Exportar selecionadas, Bloquear lojas, Desbloquear lojas (`BulkBlockModal`, com motivo e resultado);
   - "Exportar CSV" nas quatro listas, com download pelo `api.ts`.
-- [ ] T114 [US7] Conferir no navegador o roteiro "Fatia 3" de `quickstart.md` e abrir o CSV numa planilha.
+- [x] T114 [US7] Conferir no navegador o roteiro "Fatia 3" de `quickstart.md` e abrir o CSV numa planilha.
 
 ---
 
 ## Phase 13: Acabamento
 
-- [ ] T120 Atualizar `specs/001-backoffice-cadastros/spec.md` (FR-001: menu e Início) e `specs/002-pagina-da-loja/spec.md` (Anjo e bloqueio), apontando para 003.
-- [ ] T121 Rodar `scripts/sync-templates.sh` e `scripts/check-repo.sh`, e a bateria completa de testes da API e da tela.
-- [ ] T122 Marcar as tarefas concluídas neste arquivo.
+- [x] T120 Atualizar `specs/001-backoffice-cadastros/spec.md` (FR-001: menu e Início) e `specs/002-pagina-da-loja/spec.md` (Anjo e bloqueio), apontando para 003.
+- [x] T121 Rodar `scripts/sync-templates.sh` e `scripts/check-repo.sh`, e a bateria completa de testes da API e da tela.
+- [x] T122 Marcar as tarefas concluídas neste arquivo.
 
 ## Dependencies
 

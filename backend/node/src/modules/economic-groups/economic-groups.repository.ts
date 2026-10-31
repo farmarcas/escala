@@ -158,9 +158,21 @@ const findDetail = async (tx: Tx, where: Prisma.Sql): Promise<GroupDetailRecord 
 
   const countOf = (status: string) =>
     byStatus.find((item) => item.status === status)?._count._all ?? 0;
+  const card = await tx.groupBenefitCard.findUnique({
+    where: { economicGroupId: row.id },
+    select: {
+      holderName: true,
+      holderCpf: true,
+      holderBirthDate: true,
+      holderPseudonym: true,
+      cardNumber: true,
+      store: { select: { id: true, code: true, name: true, status: true } },
+    },
+  });
 
   return {
     ...toSummary(row),
+    benefitCard: card,
     cnpj: group.cnpj,
     createdAt: group.createdAt,
     updatedAt: group.updatedAt,
@@ -370,6 +382,43 @@ export const economicGroupsRepository: EconomicGroupsRepository = {
         },
       }),
     );
+  },
+
+  transferOwner(actor, groupId, owner, audit) {
+    return withActor(actor, async (tx) => {
+      await tx.groupOwner.updateMany({
+        where: { economicGroupId: groupId, deletedAt: null },
+        data: { deletedAt: new Date() },
+      });
+      await tx.groupOwner.create({ data: { ...owner, economicGroupId: groupId } });
+      await recordAudit(tx, actor, { ...audit, economicGroupId: groupId });
+      return requireDetail(tx, groupId);
+    });
+  },
+
+  findStoreInGroup(actor, groupId, code) {
+    return withActor(actor, (tx) =>
+      tx.store.findFirst({
+        where: { economicGroupId: groupId, code, deletedAt: null },
+        select: { id: true, status: true },
+      }),
+    );
+  },
+
+  saveBenefitCard(actor, groupId, card, audit) {
+    return withActor(actor, async (tx) => {
+      const data = {
+        ...card,
+        holderBirthDate: new Date(`${card.holderBirthDate}T00:00:00.000Z`),
+      };
+      await tx.groupBenefitCard.upsert({
+        where: { economicGroupId: groupId },
+        create: { ...data, economicGroupId: groupId },
+        update: data,
+      });
+      await recordAudit(tx, actor, { ...audit, economicGroupId: groupId });
+      return requireDetail(tx, groupId);
+    });
   },
 
   assignAngels(actor, assignments) {

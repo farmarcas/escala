@@ -65,6 +65,7 @@ export function useStores() {
   const stats = useApiQuery<StoreStats>('/stores/stats');
 
   return {
+    exportPath: `/stores/export${buildQuery({ ...filter, search })}`,
     filter,
     updateFilter: (patch: Partial<StoresFilter>) => {
       setFilter((current) => ({ ...current, ...patch }));

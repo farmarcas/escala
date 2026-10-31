@@ -1,23 +1,33 @@
 import type { Request, Response } from 'express';
 import type { z } from 'zod';
+import { sendCsv, toCsv } from '../../shared/http/csv.js';
 import { readPlatformIdentity } from '../../shared/identity/authenticate.js';
 import { readValidated } from '../../shared/middlewares/validate.js';
 import type {
+  benefitCardRequest,
   bulkAngelRequest,
   createGroupRequest,
   getGroupRequest,
   listGroupAuditRequest,
   listGroupsRequest,
+  ownerTransferRequest,
   setAngelRequest,
   statusChangeRequest,
   updateGroupRequest,
 } from './economic-groups.schemas.js';
+import { GROUP_CSV_COLUMNS } from './economic-groups.csv.js';
 import type { EconomicGroupsService } from './economic-groups.service.js';
 
 export const makeEconomicGroupsController = (service: EconomicGroupsService) => ({
   async list(req: Request, res: Response) {
     const { query } = readValidated<z.infer<typeof listGroupsRequest>>(res);
     res.json(await service.list(readPlatformIdentity(req), query));
+  },
+
+  async exportCsv(req: Request, res: Response) {
+    const { query } = readValidated<z.infer<typeof listGroupsRequest>>(res);
+    const rows = await service.exportRows(readPlatformIdentity(req), query);
+    sendCsv(res, 'grupos', toCsv(GROUP_CSV_COLUMNS, rows));
   },
 
   async stats(req: Request, res: Response) {
@@ -52,6 +62,16 @@ export const makeEconomicGroupsController = (service: EconomicGroupsService) => 
   async bulkAngel(req: Request, res: Response) {
     const { body } = readValidated<z.infer<typeof bulkAngelRequest>>(res);
     res.json(await service.bulkAngel(readPlatformIdentity(req), body));
+  },
+
+  async transferOwner(req: Request, res: Response) {
+    const { params, body } = readValidated<z.infer<typeof ownerTransferRequest>>(res);
+    res.json(await service.transferOwner(readPlatformIdentity(req), params.number, body));
+  },
+
+  async setBenefitCard(req: Request, res: Response) {
+    const { params, body } = readValidated<z.infer<typeof benefitCardRequest>>(res);
+    res.json(await service.setBenefitCard(readPlatformIdentity(req), params.number, body));
   },
 
   async listAudit(req: Request, res: Response) {

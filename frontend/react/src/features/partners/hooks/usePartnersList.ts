@@ -24,6 +24,11 @@ export function usePartnersList() {
   const stats = useApiQuery<PartnerStats>('/partners/stats');
 
   return {
+    exportPath: `/partners/export${buildQuery({
+      type: filter.type === 'all' ? undefined : filter.type,
+      status: filter.status,
+      search,
+    })}`,
     filter,
     // Mudar qualquer filtro volta para a primeira página.
     updateFilter: (patch: Partial<Omit<PartnersFilter, 'page'>>) =>

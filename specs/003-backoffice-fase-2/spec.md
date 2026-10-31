@@ -267,7 +267,7 @@ Na lista de lojas, a pessoa marca várias lojas e escolhe uma ação: exportar a
 
 **Lote e exportação**
 
-- **FR-070**: A lista de lojas MUST permitir marcar lojas (uma a uma ou todas as filtradas) e aplicar Exportar selecionadas, Bloquear lojas e Desbloquear lojas.
+- **FR-070**: A lista de lojas MUST permitir marcar lojas (uma a uma ou todas as filtradas) e aplicar Exportar selecionadas, Bloquear lojas e Desbloquear lojas. (Entregue: uma a uma e a página inteira, até 200 por vez. "Todas as filtradas" de várias páginas ficou para depois; para exportar tudo o que está filtrado, use Exportar CSV.)
 - **FR-071**: Ação em lote MUST pedir um único motivo, gravar um registro por loja e informar quantas foram alteradas e quantas foram puladas.
 - **FR-072**: As listas de lojas, grupos, funcionários e parceiros MUST ter "Exportar CSV" do que está filtrado, em formato que abre certo em planilha em português.
 - **FR-073**: A exportação MUST seguir a mesma regra de pseudonimização da tela de quem exporta.

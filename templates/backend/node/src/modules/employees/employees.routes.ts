@@ -23,6 +23,7 @@ export const employeesRouter = (repo: EmployeesRepository = employeesRepository)
 
   router.get('/', validate(listEmployeesRequest), controller.list);
   router.get('/stats', validate(employeeStatsRequest), controller.stats);
+  router.get('/export', validate(listEmployeesRequest), controller.exportCsv);
   router.get('/:id', validate(getEmployeeRequest), controller.get);
   router.post('/', adminOnly, validate(createEmployeeRequest), controller.create);
   router.patch('/:id', adminOnly, validate(updateEmployeeRequest), controller.update);

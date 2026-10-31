@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import type { z } from 'zod';
+import { sendCsv, toCsv } from '../../shared/http/csv.js';
 import { readPlatformIdentity } from '../../shared/identity/authenticate.js';
 import { readValidated } from '../../shared/middlewares/validate.js';
 import type {
@@ -13,6 +14,7 @@ import type {
   updateContactRequest,
   updatePartnerRequest,
 } from './partners.schemas.js';
+import { PARTNER_CSV_COLUMNS } from './partners.csv.js';
 import type { PartnersService } from './partners.service.js';
 
 export const makePartnersController = (service: PartnersService) => ({
@@ -20,6 +22,13 @@ export const makePartnersController = (service: PartnersService) => ({
     const { query } = readValidated<z.infer<typeof listPartnersRequest>>(res);
     const { page, pageSize, ...filter } = query;
     res.json(await service.list(readPlatformIdentity(req), filter, page, pageSize));
+  },
+
+  async exportCsv(req: Request, res: Response) {
+    const { query } = readValidated<z.infer<typeof listPartnersRequest>>(res);
+    const { page: _page, pageSize: _pageSize, ...filter } = query;
+    const rows = await service.exportRows(readPlatformIdentity(req), filter);
+    sendCsv(res, 'parceiros', toCsv(PARTNER_CSV_COLUMNS, rows));
   },
 
   async stats(req: Request, res: Response) {

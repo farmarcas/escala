@@ -87,6 +87,7 @@ Mudanças em rotas que já existem:
 | `POST /economic-groups/:number/owner-transfer` | `{ name, email, phone, justification }` | grupo com proprietário novo. 409 `GROUP_ARCHIVED`, `GROUP_HAS_NO_OWNER` |
 | `PUT /economic-groups/:number/benefit-card` | `{ holderName, holderCpf, holderBirthDate, cardNumber, storeCode }` | cartão (visão por papel). 400 CPF inválido. 409 `STORE_NOT_ACTIVE`, `STORE_NOT_IN_GROUP` |
 | `POST /stores/bulk` | `{ action: 'BLOCK' \| 'UNBLOCK', codes: number[1..200], justification }` | `{ changed, skipped }` |
+| `GET /stores?codes=1,2,3` e `GET /stores/export?codes=…` | até 200 códigos separados por vírgula | só as lojas escolhidas ("Exportar selecionadas") |
 | `GET /stores/export` | filtros da lista | `text/csv; charset=utf-8` |
 | `GET /economic-groups/export` | filtros da lista | idem |
 | `GET /employees/export` | filtros da lista | idem |

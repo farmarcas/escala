@@ -2,18 +2,28 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Pill } from '@/components/ui/Pill';
 import { cn } from '@/lib/cn';
-import { formatNumber, formatPhone, pluralize } from '@/lib/format';
+import { formatDate, formatNumber, formatPhone, formatStoreCode, pluralize } from '@/lib/format';
 import type { GroupDetail } from '../types';
 
 type GroupSummaryCardsProps = { group: GroupDetail };
 
 const cardLabel = 'text-xs font-bold uppercase tracking-[0.4px] text-muted-foreground';
 
-function OwnerCard({ group }: GroupSummaryCardsProps) {
+type OwnerCardProps = { group: GroupDetail; canEdit: boolean; onTransferOwner: () => void };
+
+function OwnerCard({ group, canEdit, onTransferOwner }: OwnerCardProps) {
   const owner = group.owner;
+  const canTransfer = canEdit && Boolean(owner) && group.status !== 'ARCHIVED';
   return (
     <Card className="p-5">
-      <p className={cardLabel}>Proprietário</p>
+      <div className="flex items-start gap-2">
+        <p className={cn(cardLabel, 'flex-1')}>Proprietário</p>
+        {canTransfer && (
+          <Button variant="link" size="sm" className="h-auto" onClick={onTransferOwner}>
+            Transferir titularidade
+          </Button>
+        )}
+      </div>
       {!owner && (
         <div className="mt-3">
           <p className="font-semibold text-destructive">Não cadastrado</p>
@@ -181,13 +191,87 @@ function StatesCard({ group }: GroupSummaryCardsProps) {
   );
 }
 
-export function GroupSummaryCards({ group, canEdit, onChooseAngel }: AngelCardProps) {
+type BenefitCardCardProps = { group: GroupDetail; canEdit: boolean; onEditCard: () => void };
+
+// Cartão Alelo (spec 003, US6): o analista vê só o código do titular.
+function BenefitCardCard({ group, canEdit, onEditCard }: BenefitCardCardProps) {
+  const card = group.benefitCard;
+  const canChange = canEdit && group.status !== 'ARCHIVED';
   return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4">
-      <OwnerCard group={group} />
+    <Card className="p-5">
+      <div className="flex items-start gap-2">
+        <p className={cn(cardLabel, 'flex-1')}>Cartão Alelo</p>
+        {canChange && (
+          <Button variant="link" size="sm" className="h-auto" onClick={onEditCard}>
+            {card ? 'Editar' : 'Cadastrar'}
+          </Button>
+        )}
+      </div>
+      {!card && <p className="mt-3 text-[13px] text-muted-foreground">Nenhum cartão cadastrado.</p>}
+      {card && (
+        <div className="mt-3 flex flex-col gap-3">
+          <div>
+            <p className={cn('font-semibold', !card.holderName && 'font-mono')}>
+              {card.holderName ?? card.holderPseudonym}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Titular do cartão{card.holderName ? ` · código ${card.holderPseudonym}` : ''}
+            </p>
+          </div>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[13px]">
+            <dt className="text-muted-foreground">CPF</dt>
+            <dd className={card.holderCpfMasked ? 'font-mono' : 'text-muted-foreground'}>
+              {card.holderCpfMasked ?? 'Pseudonimizado'}
+            </dd>
+            <dt className="text-muted-foreground">Nascimento</dt>
+            <dd className={card.holderBirthDate ? undefined : 'text-muted-foreground'}>
+              {card.holderBirthDate ? formatDate(card.holderBirthDate) : 'Pseudonimizado'}
+            </dd>
+            <dt className="text-muted-foreground">Número</dt>
+            <dd className={card.cardLast4 ? 'font-mono' : 'text-muted-foreground'}>
+              {card.cardLast4 ? `•••• ${card.cardLast4}` : 'Pseudonimizado'}
+            </dd>
+            <dt className="text-muted-foreground">Loja</dt>
+            <dd>
+              {formatStoreCode(card.store.code)} · {card.store.name}
+            </dd>
+          </dl>
+          {card.store.status !== 'ACTIVE' && (
+            <p className="rounded-md bg-warning-soft px-3 py-2 text-xs text-warning-text">
+              A loja do cartão está inativa. Escolha outra loja ativa em Editar.
+            </p>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+type SummaryCardsProps = {
+  group: GroupDetail;
+  canEdit: boolean;
+  onChooseAngel: () => void;
+  onTransferOwner: () => void;
+  onEditCard: () => void;
+};
+
+export function GroupSummaryCards({
+  group,
+  canEdit,
+  onChooseAngel,
+  onTransferOwner,
+  onEditCard,
+}: SummaryCardsProps) {
+  return (
+    // Em cima, as pessoas e o cartão; embaixo, os números das lojas.
+    <div className="grid gap-4 lg:grid-cols-3">
+      <OwnerCard group={group} canEdit={canEdit} onTransferOwner={onTransferOwner} />
       <AngelCard group={group} canEdit={canEdit} onChooseAngel={onChooseAngel} />
-      <StoresCard group={group} />
-      <StatesCard group={group} />
+      <BenefitCardCard group={group} canEdit={canEdit} onEditCard={onEditCard} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:col-span-3">
+        <StoresCard group={group} />
+        <StatesCard group={group} />
+      </div>
     </div>
   );
 }
