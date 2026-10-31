@@ -4,7 +4,8 @@
 --
 -- Os dados são gerados aqui mesmo, de forma determinística (md5 do número do GE ou do código da
 -- loja), em vez de milhares de linhas escritas à mão. Rodar de novo não duplica nada:
--- IDs fixos derivados do número/código + ON CONFLICT DO NOTHING.
+-- IDs fixos derivados do número/código + ON CONFLICT DO NOTHING. O md5 vira um UUID válido
+-- (versão 5, variante RFC) trocando dois caracteres, senão a API recusa o id.
 -- As tabelas "seed_*" são temporárias deste script (somem no COMMIT); não mudam o schema.
 -- Números dos GEs: 500 em diante. Códigos das lojas: 1001 em diante. CNPJs com dígito válido.
 -- Proprietários são pessoas fictícias (e-mails @exemplo.com.br), cerca de 1 em cada 3 grupos,
@@ -68,7 +69,7 @@ words AS (
 )
 SELECT n.uf, n.local_index, n.global_index,
        500 + n.global_index AS number,
-       md5('seed-rede-ge-' || (500 + n.global_index))::uuid AS id,
+       overlay(overlay(md5('seed-rede-ge-' || (500 + n.global_index)) placing '5' from 13 for 1) placing '8' from 17 for 1)::uuid AS id,
        w.nouns[1 + (n.global_index - 1) % 40]
          || w.quals[1 + ((n.global_index - 1) / 40) % 13] AS short_name,
        w.legal[1 + n.global_index % 5] AS legal_suffix,
@@ -142,7 +143,7 @@ SELECT g.id, g.number, 'Grupo ' || g.short_name, g.short_name || ' ' || g.legal_
 ON CONFLICT DO NOTHING;
 
 INSERT INTO group_owners (id, economic_group_id, name, email, phone, pseudonym, created_at, updated_at)
-SELECT md5('seed-rede-owner-' || g.number)::uuid, g.id,
+SELECT overlay(overlay(md5('seed-rede-owner-' || g.number) placing '5' from 13 for 1) placing '8' from 17 for 1)::uuid, g.id,
        (ARRAY['Ana','Bruno','Camila','Diego','Elaine','Fábio','Gabriela','Henrique','Isabela','João',
               'Larissa','Marcelo','Natália','Otávio','Patrícia','Renato','Simone','Tiago','Vanessa','Wagner'])[1 + g.number % 20]
          || ' ' ||
@@ -160,7 +161,7 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO stores (id, code, economic_group_id, brand_id, name, type, cnpj, street, number, district,
                     city, uf, opened_at, status, validated_at, validated_by, created_at, updated_at)
-SELECT md5('seed-rede-lj-' || (1000 + s.global_index))::uuid,
+SELECT overlay(overlay(md5('seed-rede-lj-' || (1000 + s.global_index)) placing '5' from 13 for 1) placing '8' from 17 for 1)::uuid,
        1000 + s.global_index,
        s.group_id,
        b.id,
@@ -206,8 +207,8 @@ SELECT md5('seed-rede-lj-' || (1000 + s.global_index))::uuid,
   JOIN seed_cnpj c ON c.body = s.cnpj_base || lpad(s.branch::text, 4, '0')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO audit_events (id, economic_group_id, action, summary, actor_subject, actor_role, justification, created_at)
-SELECT md5('seed-rede-audit-' || g.number)::uuid, g.id, 'GROUP_CREATED',
+INSERT INTO audit_events (id, economic_group_id, entity_type, entity_id, action, summary, actor_subject, actor_role, justification, created_at)
+SELECT overlay(overlay(md5('seed-rede-audit-' || g.number) placing '5' from 13 for 1) placing '8' from 17 for 1)::uuid, g.id, 'GROUP', g.id, 'GROUP_CREATED',
        'Grupo cadastrado na carga inicial', 'OP-02', 'PLATFORM_ADMIN', NULL,
        timestamptz '2024-01-15 12:00:00-03' + g.u_date * interval '900 days'
   FROM seed_group g

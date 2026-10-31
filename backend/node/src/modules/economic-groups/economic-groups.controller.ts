@@ -3,10 +3,12 @@ import type { z } from 'zod';
 import { readPlatformIdentity } from '../../shared/identity/authenticate.js';
 import { readValidated } from '../../shared/middlewares/validate.js';
 import type {
+  bulkAngelRequest,
   createGroupRequest,
   getGroupRequest,
   listGroupAuditRequest,
   listGroupsRequest,
+  setAngelRequest,
   statusChangeRequest,
   updateGroupRequest,
 } from './economic-groups.schemas.js';
@@ -40,6 +42,16 @@ export const makeEconomicGroupsController = (service: EconomicGroupsService) => 
   async changeStatus(req: Request, res: Response) {
     const { params, body } = readValidated<z.infer<typeof statusChangeRequest>>(res);
     res.json(await service.changeStatus(readPlatformIdentity(req), params.number, body));
+  },
+
+  async setAngel(req: Request, res: Response) {
+    const { params, body } = readValidated<z.infer<typeof setAngelRequest>>(res);
+    res.json(await service.setAngel(readPlatformIdentity(req), params.number, body));
+  },
+
+  async bulkAngel(req: Request, res: Response) {
+    const { body } = readValidated<z.infer<typeof bulkAngelRequest>>(res);
+    res.json(await service.bulkAngel(readPlatformIdentity(req), body));
   },
 
   async listAudit(req: Request, res: Response) {

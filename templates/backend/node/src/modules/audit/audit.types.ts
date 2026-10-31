@@ -1,5 +1,9 @@
+export type AuditEntityType = 'GROUP' | 'EMPLOYEE' | 'PARTNER';
+
 export type AuditEntry = {
   economicGroupId: string | null;
+  // Registro a que o evento se refere. Sem isso, o grupo (quando houver) é o registro.
+  entity?: { type: AuditEntityType; id: string };
   action: string;
   summary: string;
   justification?: string | null;

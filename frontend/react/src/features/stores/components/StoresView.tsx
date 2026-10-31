@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/States';
 import { Cell, HeaderCell, Row, Table, TableFooter } from '@/components/ui/Table';
 import { useBrandOptions } from '@/hooks/useBrandOptions';
+import { useEmployeeOptions } from '@/hooks/useEmployeeOptions';
 import {
   formatCnpj,
   formatGroupNumber,
@@ -30,6 +31,7 @@ export function StoresView() {
   const navigate = useNavigate();
   const list = useStores();
   const brands = useBrandOptions();
+  const angels = useEmployeeOptions();
   const stats = list.stats;
 
   return (
@@ -126,6 +128,14 @@ export function StoresView() {
           />
           <SelectField
             isLabelInline
+            label="Filtrar por Anjo"
+            placeholder="Todos"
+            options={angels.options.map((angel) => ({ value: angel.id, label: angel.name }))}
+            value={list.filter.angelId}
+            onChange={(event) => list.updateFilter({ angelId: event.target.value })}
+          />
+          <SelectField
+            isLabelInline
             label="Filtrar por tipo"
             placeholder="Todos"
             options={[
@@ -217,7 +227,7 @@ export function StoresView() {
           />
         )}
         {!list.isLoading && !list.error && list.stores.length > 0 && (
-          <Table label="Lojas da rede" minWidth="1380px">
+          <Table label="Lojas da rede" minWidth="1500px">
             <thead>
               <tr>
                 <HeaderCell>GE</HeaderCell>
@@ -226,6 +236,9 @@ export function StoresView() {
                 <HeaderCell>Tipo</HeaderCell>
                 <HeaderCell>CNPJ</HeaderCell>
                 <HeaderCell>Cidade</HeaderCell>
+                <HeaderCell title="Pessoa da Farmarcas que acompanha o grupo da loja">
+                  Anjo
+                </HeaderCell>
                 <HeaderCell>Status</HeaderCell>
                 <HeaderCell>Cadastro</HeaderCell>
                 <HeaderCell>Validação</HeaderCell>
@@ -277,6 +290,9 @@ export function StoresView() {
                     </Cell>
                     <Cell>
                       {store.city}, {store.uf}
+                    </Cell>
+                    <Cell className="whitespace-nowrap text-[13px]">
+                      {store.angel?.name ?? <span className="text-muted-foreground">—</span>}
                     </Cell>
                     <Cell>
                       <StatusBadge tone={status.tone} title={status.title}>

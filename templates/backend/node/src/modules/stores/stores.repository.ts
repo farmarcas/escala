@@ -34,7 +34,13 @@ const storeSelect = () =>
     completenessTotal: true,
     validatedAt: true,
     brand: { select: { id: true, name: true, status: true } },
-    economicGroup: { select: { number: true, name: true } },
+    economicGroup: {
+      select: {
+        number: true,
+        name: true,
+        angel: { select: { id: true, name: true, jobTitle: true, email: true, phone: true } },
+      },
+    },
     _count: {
       select: {
         changeRequests: { where: { status: 'OPEN' } },
@@ -52,6 +58,7 @@ const toRecord = (row: StoreRow): StoreRecord => ({
   code: row.code,
   groupNumber: row.economicGroup.number,
   groupName: row.economicGroup.name,
+  angel: row.economicGroup.angel,
   brand: row.brand,
   name: row.name,
   legalName: row.legalName,
@@ -79,12 +86,16 @@ const whereOf = (filter: StoreFilter): Prisma.StoreWhereInput => {
   const where: Prisma.StoreWhereInput = { deletedAt: null };
   if (filter.groupId) where.economicGroupId = filter.groupId;
   if (filter.type) where.type = filter.type;
+  const group: Prisma.EconomicGroupWhereInput = {};
   if (filter.status === 'OPERATING') {
     where.status = { not: 'INACTIVE' };
-    where.economicGroup = { status: { not: 'ARCHIVED' } };
+    group.status = { not: 'ARCHIVED' };
   } else if (filter.status) {
     where.status = filter.status;
   }
+  // O Anjo é do grupo: as lojas mostram o Anjo do grupo (spec 003, US2).
+  if (filter.angelId) group.angelEmployeeId = filter.angelId;
+  if (Object.keys(group).length > 0) where.economicGroup = group;
   if (filter.brandId) where.brandId = filter.brandId;
   if (filter.uf) where.uf = filter.uf;
   if (filter.search) {

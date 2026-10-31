@@ -18,6 +18,7 @@ export type StoreRecord = {
   code: number;
   groupNumber: number;
   groupName: string;
+  angel: { id: string; name: string; jobTitle: string; email: string; phone: string | null } | null;
   brand: { id: string; name: string; status: 'ACTIVE' | 'HISTORICAL' };
   name: string;
   legalName: string | null;

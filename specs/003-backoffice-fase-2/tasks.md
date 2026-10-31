@@ -72,69 +72,69 @@ Entrega em quatro fatias. Ao fim de cada fatia, os testes passam e a tela é con
 
 ## Phase 3: Base
 
-- [ ] T020 `prisma/schema.prisma`:
+- [x] T020 `prisma/schema.prisma`:
   - enums `EmployeeArea`, `EmployeeAccessRole`, `EmployeeStatus` e `AuditEntity`;
   - model `FarmarcasEmployee`;
   - `EconomicGroup.angelEmployeeId`;
   - `AuditEvent.entityType` e `entityId`.
-- [ ] T021 Migration `<ts>_backoffice_fase2_p1` (`--create-only` e SQL editado):
+- [x] T021 Migration `<ts>_backoffice_fase2_p1` (`--create-only` e SQL editado):
   - e-mail único sem diferenciar maiúsculas (índice parcial);
   - CHECK de telefone;
   - RLS de `farmarcas_employees`: `platform_operator` e `tenant_angel` só leitura (R1);
   - backfill de `audit_events` (`GROUP`, `economic_group_id`);
   - índices `angel_employee_id` e `(entity_type, entity_id, created_at)`.
-- [ ] T022 `scripts/db-setup.ts` com as permissões de `app_runtime` na tabela nova. `audit_events` segue só com INSERT e SELECT.
-- [ ] T023 `modules/audit`:
+- [x] T022 `scripts/db-setup.ts` com as permissões de `app_runtime` na tabela nova. `audit_events` segue só com INSERT e SELECT.
+- [x] T023 `modules/audit`:
   - `recordAudit` recebe `entityType` e `entityId`; os chamadores de grupo passam `GROUP`;
   - nova função `listAuditByEntity`.
-- [ ] T024 Seed `seeds/<ts>_funcionarios_e_anjos.sql`, idempotente:
+- [x] T024 Seed `seeds/<ts>_funcionarios_e_anjos.sql`, idempotente:
   - cerca de 12 funcionários fictícios nas 6 áreas, incluindo Juliana Prado, Isabela Nunes e Marília Duarte como Anjos;
   - Anjos ligados aos grupos de exemplo (um grupo fica sem Anjo).
 
 ## Phase 4: US1 — cadastro de funcionários
 
-- [ ] T030 [P] [US1] Regras puras em `src/modules/employees/employee-status.ts` + teste: desligar exige motivo e carteira vazia (`EMPLOYEE_HAS_PORTFOLIO`); religar exige motivo; transições inválidas.
-- [ ] T031 [US1] `src/modules/employees/`: `employees.schemas.ts`, `.repository.ts`, `.service.ts` (+ `.service.test.ts`), `.controller.ts` e `.routes.ts`.
+- [x] T030 [P] [US1] Regras puras em `src/modules/employees/employee-status.ts` + teste: desligar exige motivo e carteira vazia (`EMPLOYEE_HAS_PORTFOLIO`); religar exige motivo; transições inválidas.
+- [x] T031 [US1] `src/modules/employees/`: `employees.schemas.ts`, `.repository.ts`, `.service.ts` (+ `.service.test.ts`), `.controller.ts` e `.routes.ts`.
   - Rotas da Fatia 1 em `contracts/api.md`: lista, stats, detalhe com carteira, criar, editar, status e histórico.
   - Escrita só do admin.
   - Montar em `backoffice.routes.ts`.
-- [ ] T032 [US1] Teste de integração `employees.routes.integration.test.ts`:
+- [x] T032 [US1] Teste de integração `employees.routes.integration.test.ts`:
   - e-mail repetido devolve 409;
   - analista recebe 403 na escrita;
   - desligar com carteira devolve 409;
   - o histórico registra as mudanças;
   - tenant recebe 403.
-- [ ] T033 [P] [US1] Tela `src/features/employees/`:
+- [x] T033 [P] [US1] Tela `src/features/employees/`:
   - `types.ts`, `labels.ts` (áreas e papéis), hooks de lista, stats, detalhe e mutações;
   - `EmployeesKpis`, `EmployeesToolbar`, `EmployeesTable`, `EmployeeFormModal`, `EmployeeStatusModal`;
   - `EmployeeDetailView`, com Dados, Carteira e Histórico (reaproveitando `features/audit`).
-- [ ] T034 [US1] `app/EmployeesPage.tsx` e `app/EmployeeDetailPage.tsx`, rotas `/funcionarios` e `/funcionarios/:id`, breadcrumb com o nome (`usePageTitle`). "Funcionários" sai de "Em desenvolvimento" no `MenuRail` e no `MobileNav`.
+- [x] T034 [US1] `app/EmployeesPage.tsx` e `app/EmployeeDetailPage.tsx`, rotas `/funcionarios` e `/funcionarios/:id`, breadcrumb com o nome (`usePageTitle`). "Funcionários" sai de "Em desenvolvimento" no `MenuRail` e no `MobileNav`.
 
 ## Phase 5: US2 — Anjo do grupo
 
-- [ ] T040 [US2] API do grupo:
+- [x] T040 [US2] API do grupo:
   - `PUT /economic-groups/:number/angel`:
     - recusa funcionário não ativo e grupo arquivado;
     - grava na auditoria com o Anjo anterior e o novo.
   - `POST /economic-groups/bulk-angel` com `{ changed, skipped }`. A regra pura de alteradas e puladas fica em `src/shared/bulk.ts` + teste.
   - Filtros `angelId` e `withoutAngel`, `angel` nas visões e selo `NO_ANGEL`.
-- [ ] T041 [US2] Lojas e página da loja:
+- [x] T041 [US2] Lojas e página da loja:
   - `GET /stores` com filtro `angelId` e `angel` em cada item;
   - `store-page` devolve `angel` nos dois caminhos (o lado do grupo lê pela política `tenant_angel`).
-- [ ] T042 [US2] Testes de integração:
+- [x] T042 [US2] Testes de integração:
   - definir, trocar e retirar o Anjo, com auditoria;
   - lote com puladas;
   - filtro por Anjo;
   - o tenant A vê o próprio Anjo na página da loja e não lê o funcionário que é Anjo só do grupo B (gate de isolamento em `tenant.isolation.integration.test.ts`).
-- [ ] T043 [P] [US2] Tela de grupos:
+- [x] T043 [P] [US2] Tela de grupos:
   - coluna e selo "Sem Anjo" em `GroupsTable`;
   - filtro por Anjo em `GroupsToolbar`;
   - seleção de linhas e "Atribuir Anjo" em lote;
   - bloco Anjo no detalhe com "Definir Anjo" / "Trocar Anjo" (`AngelPickerModal`, só funcionários ativos).
-- [ ] T044 [P] [US2] Tela de lojas e página da loja:
+- [x] T044 [P] [US2] Tela de lojas e página da loja:
   - coluna e filtro Anjo em `StoresView`;
   - `ResponsiblesTab` mostra o Anjo real (nome, cargo, e-mail, telefone) no lugar do aviso.
-- [ ] T045 [US2] Conferir no navegador o roteiro "Fatia 1" de `quickstart.md`, incluindo o lado do grupo.
+- [x] T045 [US2] Conferir no navegador o roteiro "Fatia 1" de `quickstart.md`, incluindo o lado do grupo.
 
 ---
 

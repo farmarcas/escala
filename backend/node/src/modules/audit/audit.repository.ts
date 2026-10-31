@@ -1,11 +1,16 @@
 import type { Tx } from '../../shared/database/with-actor.js';
-import type { AuditActor, AuditEntry, AuditEventView } from './audit.types.js';
+import type { AuditActor, AuditEntityType, AuditEntry, AuditEventView } from './audit.types.js';
 
 // Append-only: o usuário da aplicação não tem UPDATE nem DELETE nesta tabela.
 export const recordAudit = async (tx: Tx, actor: AuditActor, entry: AuditEntry): Promise<void> => {
+  const entity =
+    entry.entity ??
+    (entry.economicGroupId ? { type: 'GROUP' as const, id: entry.economicGroupId } : null);
   await tx.auditEvent.create({
     data: {
       economicGroupId: entry.economicGroupId,
+      entityType: entity?.type ?? null,
+      entityId: entity?.id ?? null,
       action: entry.action,
       summary: entry.summary,
       justification: entry.justification ?? null,
@@ -15,13 +20,12 @@ export const recordAudit = async (tx: Tx, actor: AuditActor, entry: AuditEntry):
   });
 };
 
-export const listAuditByGroup = async (
+const listAudit = async (
   tx: Tx,
-  economicGroupId: string,
+  where: { economicGroupId: string } | { entityType: AuditEntityType; entityId: string },
   page: number,
   pageSize: number,
 ): Promise<{ data: AuditEventView[]; total: number }> => {
-  const where = { economicGroupId };
   // Consultas em sequência: dentro de uma transação interativa há uma só conexão.
   const rows = await tx.auditEvent.findMany({
     where,
@@ -44,3 +48,21 @@ export const listAuditByGroup = async (
     total,
   };
 };
+
+export const listAuditByGroup = (
+  tx: Tx,
+  economicGroupId: string,
+  page: number,
+  pageSize: number,
+): Promise<{ data: AuditEventView[]; total: number }> =>
+  listAudit(tx, { economicGroupId }, page, pageSize);
+
+// Histórico de um registro que não é de grupo (funcionário, parceiro).
+export const listAuditByEntity = (
+  tx: Tx,
+  entityType: AuditEntityType,
+  entityId: string,
+  page: number,
+  pageSize: number,
+): Promise<{ data: AuditEventView[]; total: number }> =>
+  listAudit(tx, { entityType, entityId }, page, pageSize);

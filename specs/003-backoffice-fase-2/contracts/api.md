@@ -52,7 +52,7 @@ Detalhes da resposta:
 | `POST /economic-groups/bulk-angel` | `{ numbers: number[1..200], employeeId }` | `{ changed, skipped }` |
 
 Mudanças em rotas que já existem:
-- `GET /economic-groups` aceita `angelId` e `withoutAngel=true`. Cada item traz `angel` e o selo `NO_ANGEL`.
+- `GET /economic-groups` aceita `angelId` e `withoutAngel=true` (sem Anjo e não arquivado, a mesma conta do indicador "Grupos sem Anjo"). Cada item traz `angel` e o selo `NO_ANGEL` (grupo arquivado não leva o selo).
 - `GET /stores` aceita `angelId`. Cada item traz `angel`.
 - A página da loja (`GET /stores/:code`, nos dois caminhos) traz `angel`.
 

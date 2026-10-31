@@ -22,6 +22,11 @@ type GroupRow = {
   owner_email: string | null;
   owner_phone: string | null;
   owner_pseudonym: string | null;
+  angel_id: string | null;
+  angel_name: string | null;
+  angel_job_title: string | null;
+  angel_email: string | null;
+  angel_phone: string | null;
   store_count: number;
   pdv_count: number;
   cd_count: number;
@@ -45,6 +50,16 @@ const toSummary = (row: GroupRow): GroupSummaryRecord => ({
           pseudonym: row.owner_pseudonym,
         }
       : null,
+  angel:
+    row.angel_id && row.angel_name && row.angel_job_title && row.angel_email
+      ? {
+          id: row.angel_id,
+          name: row.angel_name,
+          jobTitle: row.angel_job_title,
+          email: row.angel_email,
+          phone: row.angel_phone,
+        }
+      : null,
   storeCount: row.store_count,
   pdvCount: row.pdv_count,
   cdCount: row.cd_count,
@@ -61,6 +76,11 @@ const filterSql = (filter: Partial<GroupFilter>): Prisma.Sql => {
   if (filter.uf) {
     parts.push(Prisma.sql`EXISTS (SELECT 1 FROM stores x WHERE x.economic_group_id = g.id
                                   AND x.deleted_at IS NULL AND x.uf = ${filter.uf})`);
+  }
+  if (filter.angelId) parts.push(Prisma.sql`g.angel_employee_id = ${filter.angelId}::uuid`);
+  // Grupo arquivado não precisa de Anjo: "Sem Anjo" é a mesma conta do indicador de Funcionários.
+  if (filter.withoutAngel) {
+    parts.push(Prisma.sql`g.angel_employee_id IS NULL AND g.status <> 'ARCHIVED'`);
   }
   if (filter.brandId) {
     parts.push(Prisma.sql`EXISTS (SELECT 1 FROM stores x WHERE x.economic_group_id = g.id
@@ -94,6 +114,8 @@ const selectGroups = (where: Prisma.Sql, tail: Prisma.Sql = Prisma.empty) => Pri
   SELECT g.id, g.number, g.name, g.legal_name, g.status,
          o.name AS owner_name, o.email AS owner_email, o.phone AS owner_phone,
          o.pseudonym AS owner_pseudonym,
+         a.id AS angel_id, a.name AS angel_name, a.job_title AS angel_job_title,
+         a.email AS angel_email, a.phone AS angel_phone,
          count(s.id)::int AS store_count,
          (count(s.id) FILTER (WHERE s.type = 'PDV'))::int AS pdv_count,
          (count(s.id) FILTER (WHERE s.type = 'CD'))::int AS cd_count,
@@ -102,10 +124,11 @@ const selectGroups = (where: Prisma.Sql, tail: Prisma.Sql = Prisma.empty) => Pri
          (count(s.id) FILTER (WHERE ${OUTDATED_STORE}))::int AS outdated_count
     FROM economic_groups g
     ${ownerJoin}
+    LEFT JOIN farmarcas_employees a ON a.id = g.angel_employee_id
     LEFT JOIN stores s ON s.economic_group_id = g.id AND s.deleted_at IS NULL
     LEFT JOIN brands b ON b.id = s.brand_id
    WHERE ${where}
-   GROUP BY g.id, o.id
+   GROUP BY g.id, o.id, a.id
    ${tail}`;
 
 const findDetail = async (tx: Tx, where: Prisma.Sql): Promise<GroupDetailRecord | null> => {
@@ -324,5 +347,40 @@ export const economicGroupsRepository: EconomicGroupsRepository = {
 
   listAudit(actor, groupId, page, pageSize) {
     return withActor(actor, (tx) => listAuditByGroup(tx, groupId, page, pageSize));
+  },
+
+  findAngelCandidate(actor, employeeId) {
+    return withActor(actor, (tx) =>
+      tx.farmarcasEmployee.findFirst({
+        where: { id: employeeId, deletedAt: null },
+        select: { id: true, name: true, status: true },
+      }),
+    );
+  },
+
+  findAngelTargets(actor, numbers) {
+    return withActor(actor, (tx) =>
+      tx.economicGroup.findMany({
+        where: { number: { in: numbers }, deletedAt: null },
+        select: {
+          id: true,
+          number: true,
+          status: true,
+          angel: { select: { id: true, name: true } },
+        },
+      }),
+    );
+  },
+
+  assignAngels(actor, assignments) {
+    return withActor(actor, async (tx) => {
+      for (const { groupId, employeeId, audit } of assignments) {
+        await tx.economicGroup.update({
+          where: { id: groupId },
+          data: { angelEmployeeId: employeeId },
+        });
+        await recordAudit(tx, actor, { ...audit, economicGroupId: groupId });
+      }
+    });
   },
 };

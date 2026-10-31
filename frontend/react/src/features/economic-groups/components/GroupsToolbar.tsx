@@ -3,16 +3,18 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { SelectField } from '@/components/ui/SelectField';
 import { UF_OPTIONS } from '@/lib/uf';
 import type { BrandOption } from '@/hooks/useBrandOptions';
-import type { GroupStats, GroupsFilter, StatusFilter } from '../types';
+import type { EmployeeOption } from '@/hooks/useEmployeeOptions';
+import { NO_ANGEL_FILTER, type GroupStats, type GroupsFilter, type StatusFilter } from '../types';
 
 type GroupsToolbarProps = {
   filter: GroupsFilter;
   stats: GroupStats | undefined;
   brands: BrandOption[];
+  angels: EmployeeOption[];
   onChange: (patch: Partial<Omit<GroupsFilter, 'page'>>) => void;
 };
 
-export function GroupsToolbar({ filter, stats, brands, onChange }: GroupsToolbarProps) {
+export function GroupsToolbar({ filter, stats, brands, angels, onChange }: GroupsToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-4 border-b border-border px-5 py-4">
       <SegmentedControl<StatusFilter>
@@ -47,6 +49,17 @@ export function GroupsToolbar({ filter, stats, brands, onChange }: GroupsToolbar
         options={brands.map((brand) => ({ value: brand.id, label: brand.name }))}
         value={filter.brandId}
         onChange={(event) => onChange({ brandId: event.target.value })}
+      />
+      <SelectField
+        isLabelInline
+        label="Filtrar por Anjo"
+        placeholder="Todos"
+        options={[
+          { value: NO_ANGEL_FILTER, label: 'Sem Anjo' },
+          ...angels.map((angel) => ({ value: angel.id, label: angel.name })),
+        ]}
+        value={filter.angel}
+        onChange={(event) => onChange({ angel: event.target.value })}
       />
     </div>
   );

@@ -12,11 +12,10 @@ export type AuditEvent = {
   justification: string | null;
 };
 
-export function useGroupAudit(groupNumber: number) {
+// Trilha de um registro: grupo (/economic-groups/N/audit-events), funcionário ou parceiro.
+export function useAuditEvents(path: string) {
   const [page, setPage] = useState(1);
-  const query = useApiQuery<Paginated<AuditEvent>>(
-    `/economic-groups/${groupNumber}/audit-events${buildQuery({ page, pageSize: 20 })}`,
-  );
+  const query = useApiQuery<Paginated<AuditEvent>>(`${path}${buildQuery({ page, pageSize: 20 })}`);
   return {
     events: query.data?.data ?? [],
     meta: query.data?.meta,

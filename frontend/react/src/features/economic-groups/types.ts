@@ -3,7 +3,16 @@ export type GroupStatus = 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
 // O analista recebe só o pseudônimo; nome, e-mail e telefone vêm apenas para o administrador.
 export type Owner = { pseudonym: string; name?: string; email?: string; phone?: string };
 
-export type GroupBadge = 'NO_OWNER' | 'OUTDATED_STORES';
+export type GroupBadge = 'NO_OWNER' | 'NO_ANGEL' | 'OUTDATED_STORES';
+
+// Anjo: funcionário da Farmarcas que acompanha o grupo (aparece pelo nome).
+export type Angel = {
+  id: string;
+  name: string;
+  jobTitle: string;
+  email: string;
+  phone: string | null;
+};
 
 export type GroupSummary = {
   number: number;
@@ -11,6 +20,7 @@ export type GroupSummary = {
   legalName: string;
   status: GroupStatus;
   owner: Owner | null;
+  angel: Angel | null;
   storeCount: number;
   pdvCount: number;
   cdCount: number;
@@ -64,8 +74,14 @@ export type GroupsFilter = {
   search: string;
   uf: string;
   brandId: string;
+  // Id do funcionário, ou NO_ANGEL para "Sem Anjo".
+  angel: string;
   page: number;
 };
+
+export const NO_ANGEL_FILTER = 'NO_ANGEL';
+
+export type BulkResult = { changed: number; skipped: number };
 
 // Contexto entregue às abas que a página compõe (lojas e auditoria vêm de outras features).
 export type GroupTabContext = {

@@ -39,8 +39,8 @@ Transições de `status`:
 
 | Coluna | Tipo | Regra |
 |---|---|---|
-| entity_type | enum `audit_entity` | `GROUP`, `EMPLOYEE`, `PARTNER`. Backfill: `GROUP` |
-| entity_id | uuid | backfill: `economic_group_id`. Índice `(entity_type, entity_id, created_at)` |
+| entity_type | enum `audit_entity`, opcional | `GROUP`, `EMPLOYEE`, `PARTNER`. Backfill: `GROUP` onde há grupo. Eventos de marca ficam sem registro (nulo) |
+| entity_id | uuid, opcional | backfill: `economic_group_id`. Índice `(entity_type, entity_id, created_at)` |
 
 ## Fatia 2
 

@@ -2,7 +2,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/States';
 import { TableFooter } from '@/components/ui/Table';
 import { formatDateTime } from '@/lib/format';
-import { useGroupAudit } from '../hooks/useGroupAudit';
+import { useAuditEvents } from '../hooks/useAuditEvents';
 
 const ROLE_LABEL: Record<string, string> = {
   PLATFORM_ADMIN: 'Administrador da plataforma',
@@ -10,31 +10,35 @@ const ROLE_LABEL: Record<string, string> = {
   SYSTEM: 'Sistema',
 };
 
-type AuditTrailProps = { groupNumber: number };
+type AuditTrailProps = {
+  // Rota da trilha na API, ex.: /economic-groups/417/audit-events.
+  path: string;
+  description?: string;
+  emptyDescription?: string;
+};
 
-// Trilha append-only do grupo: quem fez o quê, quando e por quê.
-export function AuditTrail({ groupNumber }: AuditTrailProps) {
-  const audit = useGroupAudit(groupNumber);
+const GROUP_DESCRIPTION =
+  'Registros não podem ser alterados nem apagados. Inclui a consulta do operador aos dados pessoais do proprietário.';
+
+// Trilha append-only de um registro: quem fez o quê, quando e por quê.
+export function AuditTrail({
+  path,
+  description = GROUP_DESCRIPTION,
+  emptyDescription = 'Toda alteração no grupo aparece aqui.',
+}: AuditTrailProps) {
+  const audit = useAuditEvents(path);
 
   if (audit.isLoading) return <LoadingState label="Carregando auditoria" />;
   if (audit.error) return <ErrorState message={audit.error.message} onRetry={audit.reload} />;
   if (audit.events.length === 0) {
-    return (
-      <EmptyState
-        title="Nenhum registro ainda"
-        description="Toda alteração no grupo aparece aqui."
-      />
-    );
+    return <EmptyState title="Nenhum registro ainda" description={emptyDescription} />;
   }
 
   return (
     <>
       <div className="border-b border-border px-5 py-4">
         <h2 className="text-base font-semibold">Trilha de auditoria</h2>
-        <p className="text-xs text-muted-foreground">
-          Registros não podem ser alterados nem apagados. Inclui a consulta do operador aos dados
-          pessoais do proprietário.
-        </p>
+        <p className="text-xs text-muted-foreground">{description}</p>
       </div>
       <ol className="flex flex-col">
         {audit.events.map((event) => (

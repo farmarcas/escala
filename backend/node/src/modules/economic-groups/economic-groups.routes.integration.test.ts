@@ -101,7 +101,7 @@ describe('economic groups routes', () => {
     expect(detail.status).toBe(200);
     expect(detail.body.owner.name).toBe('Dona Grupo Aurora');
     expect(await ownerDb.auditEvent.count({ where: { action: 'OWNER_VIEWED' } })).toBe(1);
-    expect(noOwner.body.badges).toEqual(['NO_OWNER']);
+    expect(noOwner.body.badges).toEqual(['NO_OWNER', 'NO_ANGEL']);
     expect(missing.status).toBe(404);
     expect(missing.body.error.code).toBe('GROUP_NOT_FOUND');
   });
@@ -115,7 +115,11 @@ describe('economic groups routes', () => {
       .send({ name: 'Grupo Ipê Sul', owner: newGroup.owner });
 
     expect(response.status).toBe(200);
-    expect(response.body).toMatchObject({ number: 66, name: 'Grupo Ipê Sul', badges: [] });
+    expect(response.body).toMatchObject({
+      number: 66,
+      name: 'Grupo Ipê Sul',
+      badges: ['NO_ANGEL'],
+    });
     expect(response.body.owner.pseudonym).toMatch(/^F-/);
   });
 
@@ -191,6 +195,9 @@ describe('economic groups routes', () => {
         { uf: 'SP', stores: 1, groups: 1 },
       ],
     });
-    expect(list.body.data[0]).toMatchObject({ outdatedStores: 1, badges: ['OUTDATED_STORES'] });
+    expect(list.body.data[0]).toMatchObject({
+      outdatedStores: 1,
+      badges: ['NO_ANGEL', 'OUTDATED_STORES'],
+    });
   });
 });

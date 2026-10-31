@@ -205,6 +205,8 @@ const buildPage = async (tx: Tx, store: StoreRow, viewer: Viewer) => {
           }
         : { pseudonym: owner.pseudonym, name: null, email: null, phone: null }
       : null,
+    // Anjo: funcionário da Farmarcas que acompanha o grupo; aparece pelo nome para os dois lados.
+    angel: store.economicGroup.angel ?? null,
     documentAlerts: docs.filter((doc) => documentStatus(doc.validUntil, today) !== 'valid').length,
     openRequests,
     permissions,

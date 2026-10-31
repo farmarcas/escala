@@ -1,6 +1,8 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { formatGroupNumber, formatStoreCode } from '@/lib/format';
 import { BrandsPage } from './BrandsPage';
+import { EmployeeDetailPage } from './EmployeeDetailPage';
+import { EmployeesPage } from './EmployeesPage';
 import { GroupDetailPage } from './GroupDetailPage';
 import { GroupsPage } from './GroupsPage';
 import { HomePage } from './HomePage';
@@ -51,6 +53,19 @@ export const router = createBrowserRouter([
         path: '/marcas',
         element: <BrandsPage />,
         handle: handle(() => [{ label: 'Marcas Farmarcas' }]),
+      },
+      {
+        path: '/funcionarios',
+        element: <EmployeesPage />,
+        handle: handle(() => [{ label: 'Funcionários' }]),
+      },
+      {
+        path: '/funcionarios/:id',
+        element: <EmployeeDetailPage />,
+        handle: handle(() => [
+          { label: 'Funcionários', to: '/funcionarios' },
+          { label: 'Funcionário' },
+        ]),
       },
       {
         path: '*',

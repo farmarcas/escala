@@ -9,6 +9,7 @@ import { brandsRouter } from '../brands/brands.routes.js';
 import type { BrandsRepository } from '../brands/brands.service.js';
 import { economicGroupsRouter } from '../economic-groups/economic-groups.routes.js';
 import type { EconomicGroupsRepository } from '../economic-groups/economic-groups.service.js';
+import { employeesRouter } from '../employees/employees.routes.js';
 import { homeRouter } from '../home/home.routes.js';
 import { overviewRouter } from '../overview/overview.routes.js';
 import { storePageRouter } from '../store-page/store-page.routes.js';
@@ -41,6 +42,7 @@ export const backofficeRouter = (deps: BackofficeDeps) => {
     economicGroupsRouter(deps.economicGroupsRepository, deps.storesRepository),
   );
   router.use('/stores', storesRouter(deps.storesRepository));
+  router.use('/employees', employeesRouter());
   // Página da loja: mesmas rotas do caminho do grupo (/api/v1/tenant).
   router.use(storePageRouter());
 

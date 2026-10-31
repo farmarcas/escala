@@ -5,6 +5,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/ui/States';
 import { Tabs } from '@/components/ui/Tabs';
 import { useGroupDetail } from '../hooks/useGroupDetail';
 import type { GroupTabContext, StatusAction } from '../types';
+import { AngelPickerModal } from './AngelPickerModal';
 import { GroupFormModal } from './GroupFormModal';
 import { GroupHeader } from './GroupHeader';
 import { GroupSummaryCards } from './GroupSummaryCards';
@@ -26,7 +27,9 @@ export function GroupDetailView({
   renderStores,
   renderAudit,
 }: GroupDetailViewProps) {
-  const { group, isLoading, error, reload, update, changeStatus } = useGroupDetail(number);
+  const { group, isLoading, error, reload, update, changeStatus, setAngel } =
+    useGroupDetail(number);
+  const [isPickingAngel, setIsPickingAngel] = useState(false);
   const [tab, setTab] = useState<DetailTab>('stores');
   const [isEditing, setIsEditing] = useState(false);
   const [statusAction, setStatusAction] = useState<StatusAction | null>(null);
@@ -72,7 +75,20 @@ export function GroupDetailView({
           setIsAddingStore(true);
         }}
       />
-      <GroupSummaryCards group={group} />
+      <GroupSummaryCards
+        group={group}
+        canEdit={canEdit}
+        onChooseAngel={() => setIsPickingAngel(true)}
+      />
+      <AngelPickerModal
+        isOpen={isPickingAngel}
+        title={group.angel ? 'Trocar Anjo' : 'Definir Anjo'}
+        subtitle={group.name}
+        currentId={group.angel?.id ?? null}
+        canRemove
+        onClose={() => setIsPickingAngel(false)}
+        onConfirm={setAngel}
+      />
 
       <Card as="section" className="overflow-hidden">
         <div className="px-5">

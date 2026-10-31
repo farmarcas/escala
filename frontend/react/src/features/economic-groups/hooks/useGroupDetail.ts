@@ -28,7 +28,17 @@ export function useGroupDetail(number: number | null) {
     [number, reload],
   );
 
+  const setAngel = useCallback(
+    async (employeeId: string | null) => {
+      if (!number) return;
+      await api.put<GroupDetail>(`/economic-groups/${number}/angel`, { employeeId });
+      reload();
+    },
+    [number, reload],
+  );
+
   return {
+    setAngel,
     group: detail.data,
     isLoading: detail.isLoading && !detail.data,
     error: detail.error,

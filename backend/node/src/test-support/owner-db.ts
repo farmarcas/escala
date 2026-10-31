@@ -26,7 +26,8 @@ export const resetBackoffice = async () => {
   await ownerDb.$executeRawUnsafe(
     `TRUNCATE store_custom_entries, store_free_fields, store_free_sections, store_catalog_entries, store_opening_hours,
               store_document_files, store_documents, store_change_request_events, store_change_requests,
-              store_history, audit_events, stores, group_owners, economic_groups, brands, catalog_items
+              store_history, audit_events, stores, group_owners, economic_groups, brands, catalog_items,
+              farmarcas_employees
      RESTART IDENTITY CASCADE`,
   );
 };
@@ -119,3 +120,19 @@ export const createCatalogItem = (
   name: string,
   extra: { negotiatedMonthlyCents?: number; groupLabel?: string } = {},
 ) => ownerDb.catalogItem.create({ data: { kind, name, ...extra } });
+
+export const createEmployee = (
+  name: string,
+  options: { status?: 'ACTIVE' | 'TERMINATED'; email?: string } = {},
+) =>
+  ownerDb.farmarcasEmployee.create({
+    data: {
+      name,
+      email: options.email ?? `${name.toLowerCase().replace(/\s+/g, '.')}@farmarcas.com.br`,
+      area: 'MEMBER_SUCCESS',
+      jobTitle: 'Analista de relacionamento',
+      accessRole: 'PLATFORM_ANALYST',
+      status: options.status ?? 'ACTIVE',
+      terminatedAt: options.status === 'TERMINATED' ? new Date() : null,
+    },
+  });

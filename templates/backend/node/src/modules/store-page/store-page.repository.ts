@@ -29,6 +29,8 @@ export const storeInclude = {
         select: { name: true, pseudonym: true, email: true, phone: true },
         take: 1,
       },
+      // O grupo lê o próprio Anjo pela política tenant_angel (spec 003, R1).
+      angel: { select: { name: true, jobTitle: true, email: true, phone: true } },
     },
   },
 } as const satisfies Prisma.StoreInclude;

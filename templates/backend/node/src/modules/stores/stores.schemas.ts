@@ -55,6 +55,7 @@ export const listStoresQuery = z
     ...paginationShape,
     ...storeFilters,
     brandId: z.string().uuid().optional(),
+    angelId: z.string().uuid().optional(),
     uf: z.enum(UFS).optional(),
     // OPERATING = rede em operação, a mesma conta do Início: ativa ou pendente, de grupo não arquivado.
     status: z.enum([...storeStatusSchema.options, 'OPERATING']).optional(),

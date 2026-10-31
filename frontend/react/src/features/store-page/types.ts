@@ -144,6 +144,8 @@ export type StorePage = {
     email: string | null;
     phone: string | null;
   } | null;
+  // Anjo do grupo: pessoa da Farmarcas que acompanha a loja.
+  angel: { name: string; jobTitle: string; email: string; phone: string | null } | null;
   documentAlerts: number;
   openRequests: number;
   permissions: StorePermissions;

@@ -11,6 +11,7 @@ const PAGE_SIZE = 20;
 export type StoresFilter = {
   search: string;
   brandId: string;
+  angelId: string;
   uf: string;
   type: string;
   status: string;
@@ -23,6 +24,7 @@ export type StoresFilter = {
 const INITIAL: StoresFilter = {
   search: '',
   brandId: '',
+  angelId: '',
   uf: '',
   type: '',
   status: '',

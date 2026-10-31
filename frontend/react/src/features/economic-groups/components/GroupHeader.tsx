@@ -54,6 +54,7 @@ export function GroupHeader({
         {group.badges.includes('NO_OWNER') && (
           <StatusBadge tone="danger">Sem proprietário</StatusBadge>
         )}
+        {group.badges.includes('NO_ANGEL') && <StatusBadge tone="warning">Sem Anjo</StatusBadge>}
         <div className="flex-1" />
         {canEdit && (
           <div className="flex flex-wrap gap-2">

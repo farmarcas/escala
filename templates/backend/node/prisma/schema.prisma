@@ -146,6 +146,41 @@ enum StoreHistoryKind {
   @@map("store_history_kind")
 }
 
+// Fase 2 do Backoffice (specs/003-backoffice-fase-2/data-model.md).
+enum EmployeeArea {
+  COMMERCIAL
+  MEMBER_FINANCE
+  TRADE
+  DIGITAL_PRODUCTS
+  MEMBER_SUCCESS
+  OPERATIONS
+
+  @@map("employee_area")
+}
+
+enum EmployeeAccessRole {
+  PLATFORM_ADMIN
+  PLATFORM_ANALYST
+  NONE
+
+  @@map("employee_access_role")
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  TERMINATED
+
+  @@map("employee_status")
+}
+
+enum AuditEntity {
+  GROUP
+  EMPLOYEE
+  PARTNER
+
+  @@map("audit_entity")
+}
+
 model Brand {
   id             String      @id @default(uuid(7)) @db.Uuid
   name           String
@@ -161,19 +196,23 @@ model Brand {
 
 // O tenant. `number` é o número do GE emitido pela Farmarcas: único e imutável.
 model EconomicGroup {
-  id          String       @id @default(uuid(7)) @db.Uuid
-  number      Int          @unique @default(autoincrement())
-  name        String
-  legalName   String       @map("legal_name")
-  cnpj        String       @db.Char(14)
-  status      GroupStatus  @default(ACTIVE)
-  deletedAt   DateTime?    @map("deleted_at") @db.Timestamptz(3)
-  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
-  owners      GroupOwner[]
-  stores      Store[]
-  auditEvents AuditEvent[]
+  id              String             @id @default(uuid(7)) @db.Uuid
+  number          Int                @unique @default(autoincrement())
+  name            String
+  legalName       String             @map("legal_name")
+  cnpj            String             @db.Char(14)
+  status          GroupStatus        @default(ACTIVE)
+  deletedAt       DateTime?          @map("deleted_at") @db.Timestamptz(3)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  // Anjo: funcionário da Farmarcas que acompanha o grupo (um por grupo).
+  angelEmployeeId String?            @map("angel_employee_id") @db.Uuid
+  angel           FarmarcasEmployee? @relation(fields: [angelEmployeeId], references: [id])
+  owners          GroupOwner[]
+  stores          Store[]
+  auditEvents     AuditEvent[]
 
+  @@index([angelEmployeeId])
   @@map("economic_groups")
 }
 
@@ -280,9 +319,13 @@ model AuditEvent {
   actorSubject    String         @map("actor_subject")
   actorRole       String         @map("actor_role")
   justification   String?
+  // Registro a que o evento se refere: grupo, funcionário ou parceiro (fase 2).
+  entityType      AuditEntity?   @map("entity_type")
+  entityId        String?        @map("entity_id") @db.Uuid
   createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([economicGroupId, createdAt])
+  @@index([entityType, entityId, createdAt])
   @@map("audit_events")
 }
 
@@ -485,4 +528,24 @@ model StoreCustomEntry {
 
   @@index([storeId])
   @@map("store_custom_entries")
+}
+
+// Funcionário da Farmarcas (operador). Dado da plataforma, fora de qualquer tenant; o grupo
+// só lê o próprio Anjo (política tenant_angel no SQL da migration).
+model FarmarcasEmployee {
+  id           String             @id @default(uuid(7)) @db.Uuid
+  name         String
+  email        String
+  phone        String?
+  area         EmployeeArea
+  jobTitle     String             @map("job_title")
+  accessRole   EmployeeAccessRole @map("access_role")
+  status       EmployeeStatus     @default(ACTIVE)
+  terminatedAt DateTime?          @map("terminated_at") @db.Timestamptz(3)
+  deletedAt    DateTime?          @map("deleted_at") @db.Timestamptz(3)
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  angelOf      EconomicGroup[]
+
+  @@map("farmarcas_employees")
 }

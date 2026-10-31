@@ -1,18 +1,30 @@
 import { generatePseudonym } from '../../shared/br/pseudonym.js';
 import { ConflictError } from '../../shared/errors/conflict-error.js';
 import { NotFoundError } from '../../shared/errors/not-found-error.js';
+import { splitBulk } from '../../shared/bulk.js';
 import { isPlatformAdmin, type PlatformIdentity } from '../../shared/identity/identity.js';
 import type { AuditEntry, AuditEventView } from '../audit/audit.types.js';
 import type {
+  BulkAngelInput,
   CreateGroupInput,
   GroupStatusValue,
   ListGroupsQuery,
   OwnerInput,
+  SetAngelInput,
   StatusChangeInput,
   UpdateGroupInput,
 } from './economic-groups.schemas.js';
 
 export type OwnerRecord = { name: string; email: string; phone: string; pseudonym: string };
+
+// Anjo: funcionário da Farmarcas que acompanha o grupo. Pessoa da Farmarcas aparece pelo nome.
+export type AngelRecord = {
+  id: string;
+  name: string;
+  jobTitle: string;
+  email: string;
+  phone: string | null;
+};
 
 export type GroupSummaryRecord = {
   id: string;
@@ -21,6 +33,7 @@ export type GroupSummaryRecord = {
   legalName: string;
   status: GroupStatusValue;
   owner: OwnerRecord | null;
+  angel: AngelRecord | null;
   storeCount: number;
   pdvCount: number;
   cdCount: number;
@@ -65,6 +78,17 @@ export type AuditDraft = Omit<AuditEntry, 'economicGroupId'>;
 
 export type OwnerWrite = OwnerInput & { pseudonym?: string };
 
+export type AngelCandidate = { id: string; name: string; status: 'ACTIVE' | 'TERMINATED' };
+
+export type AngelTarget = {
+  id: string;
+  number: number;
+  status: GroupStatusValue;
+  angel: { id: string; name: string } | null;
+};
+
+export type AngelAssignment = { groupId: string; employeeId: string | null; audit: AuditDraft };
+
 export type EconomicGroupsRepository = {
   list: (
     actor: PlatformIdentity,
@@ -104,11 +128,18 @@ export type EconomicGroupsRepository = {
     page: number,
     pageSize: number,
   ) => Promise<{ data: AuditEventView[]; total: number }>;
+  findAngelCandidate: (
+    actor: PlatformIdentity,
+    employeeId: string,
+  ) => Promise<AngelCandidate | null>;
+  findAngelTargets: (actor: PlatformIdentity, numbers: number[]) => Promise<AngelTarget[]>;
+  // Grava todas as trocas numa transação, cada uma com o seu registro na auditoria do grupo.
+  assignAngels: (actor: PlatformIdentity, assignments: AngelAssignment[]) => Promise<void>;
 };
 
 export type OwnerView = { pseudonym: string; name?: string; email?: string; phone?: string };
 
-export type GroupBadge = 'NO_OWNER' | 'OUTDATED_STORES';
+export type GroupBadge = 'NO_OWNER' | 'NO_ANGEL' | 'OUTDATED_STORES';
 
 // Pseudonimização por padrão (Product Vision §6.3): o analista recebe só o código.
 export const toOwnerView = (
@@ -122,6 +153,8 @@ export const toOwnerView = (
 
 const badgesOf = (group: GroupSummaryRecord): GroupBadge[] => [
   ...(group.owner ? [] : (['NO_OWNER'] as const)),
+  // Grupo arquivado não precisa de Anjo.
+  ...(group.angel || group.status === 'ARCHIVED' ? [] : (['NO_ANGEL'] as const)),
   ...(group.outdatedStores > 0 ? (['OUTDATED_STORES'] as const) : []),
 ];
 
@@ -168,6 +201,24 @@ const FIELD_LABELS: Record<keyof UpdateGroupInput, string> = {
 
 const notFound = () => new NotFoundError('Grupo econômico não encontrado', 'GROUP_NOT_FOUND');
 
+// Registro da troca de Anjo na auditoria do grupo (null = sem Anjo).
+export const angelAudit = (
+  current: { name: string } | null,
+  next: { name: string } | null,
+): AuditDraft => {
+  if (!current && next) return { action: 'ANGEL_ASSIGNED', summary: `Anjo definido: ${next.name}` };
+  if (current && !next) {
+    return { action: 'ANGEL_REMOVED', summary: `Anjo retirado (era ${current.name})` };
+  }
+  return {
+    action: 'ANGEL_CHANGED',
+    summary: `Anjo trocado de ${current?.name ?? '—'} para ${next?.name ?? '—'}`,
+  };
+};
+
+const archivedGroup = () =>
+  new ConflictError('Grupo arquivado não muda de Anjo. Restaure o grupo antes.', 'GROUP_ARCHIVED');
+
 // Recarregar a tela não deve encher a trilha: uma consulta por operador e grupo a cada 30 min.
 export const OWNER_VIEW_WINDOW_MINUTES = 30;
 
@@ -176,6 +227,15 @@ export const makeEconomicGroupsService = (repo: EconomicGroupsRepository) => {
     const group = await repo.findByNumber(actor, number);
     if (!group) throw notFound();
     return group;
+  };
+
+  const requireActiveEmployee = async (actor: PlatformIdentity, employeeId: string) => {
+    const employee = await repo.findAngelCandidate(actor, employeeId);
+    if (!employee) throw new NotFoundError('Funcionário não encontrado', 'EMPLOYEE_NOT_FOUND');
+    if (employee.status !== 'ACTIVE') {
+      throw new ConflictError('Só um funcionário ativo pode ser Anjo', 'EMPLOYEE_NOT_ACTIVE');
+    }
+    return employee;
   };
 
   return {
@@ -269,6 +329,43 @@ export const makeEconomicGroupsService = (repo: EconomicGroupsRepository) => {
         justification: input.justification,
       });
       return toGroupDetailView(actor, updated);
+    },
+
+    async setAngel(actor: PlatformIdentity, number: number, input: SetAngelInput) {
+      const current = await requireGroup(actor, number);
+      if (current.status === 'ARCHIVED') throw archivedGroup();
+      if ((current.angel?.id ?? null) === input.employeeId) {
+        return toGroupDetailView(actor, current);
+      }
+      const next = input.employeeId ? await requireActiveEmployee(actor, input.employeeId) : null;
+      await repo.assignAngels(actor, [
+        {
+          groupId: current.id,
+          employeeId: next?.id ?? null,
+          audit: angelAudit(current.angel, next),
+        },
+      ]);
+      return toGroupDetailView(actor, await requireGroup(actor, number));
+    },
+
+    async bulkAngel(actor: PlatformIdentity, input: BulkAngelInput) {
+      const next = await requireActiveEmployee(actor, input.employeeId);
+      const numbers = [...new Set(input.numbers)];
+      const targets = await repo.findAngelTargets(actor, numbers);
+      const { toChange, skipped } = splitBulk(
+        numbers.length,
+        targets,
+        (group) => group.status !== 'ARCHIVED' && group.angel?.id !== next.id,
+      );
+      await repo.assignAngels(
+        actor,
+        toChange.map((group) => ({
+          groupId: group.id,
+          employeeId: next.id,
+          audit: angelAudit(group.angel, next),
+        })),
+      );
+      return { changed: toChange.length, skipped };
     },
 
     async listAudit(actor: PlatformIdentity, number: number, page: number, pageSize: number) {

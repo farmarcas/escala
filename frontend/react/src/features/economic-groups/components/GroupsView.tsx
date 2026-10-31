@@ -7,10 +7,12 @@ import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/States';
 import { TableFooter } from '@/components/ui/Table';
 import { useBrandOptions } from '@/hooks/useBrandOptions';
+import { useEmployeeOptions } from '@/hooks/useEmployeeOptions';
 import { api } from '@/lib/api';
-import { formatNumber } from '@/lib/format';
+import { formatNumber, pluralize } from '@/lib/format';
 import { useGroupsList } from '../hooks/useGroupsList';
-import type { GroupDetail, GroupInput } from '../types';
+import type { BulkResult, GroupDetail, GroupInput } from '../types';
+import { AngelPickerModal } from './AngelPickerModal';
 import { GroupFormModal } from './GroupFormModal';
 import { GroupsBreakdown } from './GroupsBreakdown';
 import { GroupsKpis } from './GroupsKpis';
@@ -23,7 +25,38 @@ export function GroupsView({ canEdit }: GroupsViewProps) {
   const navigate = useNavigate();
   const list = useGroupsList();
   const brands = useBrandOptions();
+  const angels = useEmployeeOptions();
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [bulkResult, setBulkResult] = useState<BulkResult | null>(null);
+
+  const toggle = (number: number) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(number)) next.delete(number);
+      else next.add(number);
+      return next;
+    });
+  // Marcar todos da página; se já estavam todos marcados, desmarca a página.
+  const toggleAll = (numbers: number[]) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      const isAll = numbers.every((number) => next.has(number));
+      numbers.forEach((number) => (isAll ? next.delete(number) : next.add(number)));
+      return next;
+    });
+
+  const handleBulkAngel = async (employeeId: string | null) => {
+    if (!employeeId) return;
+    const result = await api.post<BulkResult>('/economic-groups/bulk-angel', {
+      numbers: [...selected],
+      employeeId,
+    });
+    setBulkResult(result);
+    setSelected(new Set());
+    list.reload();
+  };
 
   const handleCreate = async (input: GroupInput) => {
     const created = await api.post<GroupDetail>('/economic-groups', input);
@@ -46,8 +79,42 @@ export function GroupsView({ canEdit }: GroupsViewProps) {
           filter={list.filter}
           stats={list.stats}
           brands={brands.all}
+          angels={angels.options}
           onChange={list.updateFilter}
         />
+        {canEdit && selected.size > 0 && (
+          <div
+            role="region"
+            aria-label="Ações em lote"
+            className="flex flex-wrap items-center gap-3 border-b border-border bg-primary-tint px-5 py-3 text-[13px]"
+          >
+            <span className="font-semibold">
+              {pluralize(selected.size, 'grupo selecionado', 'grupos selecionados')}
+            </span>
+            <Button size="sm" onClick={() => setIsAssigning(true)}>
+              Atribuir Anjo
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
+              Limpar seleção
+            </Button>
+          </div>
+        )}
+        {bulkResult && (
+          <div
+            role="status"
+            className="flex flex-wrap items-center gap-3 border-b border-border bg-success-soft px-5 py-3 text-[13px] text-success-text"
+          >
+            <span className="flex-1">
+              Anjo atribuído: {pluralize(bulkResult.changed, 'grupo alterado', 'grupos alterados')}
+              {bulkResult.skipped > 0 &&
+                ` · ${pluralize(bulkResult.skipped, 'pulado', 'pulados')} (arquivado ou já com esse Anjo)`}
+              .
+            </span>
+            <Button size="sm" variant="ghost" onClick={() => setBulkResult(null)}>
+              Fechar
+            </Button>
+          </div>
+        )}
         {list.isLoading && <LoadingState label="Carregando grupos" />}
         {list.error && !list.isLoading && (
           <ErrorState message={list.error.message} onRetry={list.reload} />
@@ -72,7 +139,12 @@ export function GroupsView({ canEdit }: GroupsViewProps) {
             aria-busy={list.isRefreshing}
             className={list.isRefreshing ? 'opacity-60' : undefined}
           >
-            <GroupsTable groups={list.groups} />
+            <GroupsTable
+              groups={list.groups}
+              selection={
+                canEdit ? { selected, onToggle: toggle, onToggleAll: toggleAll } : undefined
+              }
+            />
           </div>
         )}
         {list.meta && list.meta.total > 0 && (
@@ -85,6 +157,14 @@ export function GroupsView({ canEdit }: GroupsViewProps) {
           </TableFooter>
         )}
       </Card>
+
+      <AngelPickerModal
+        isOpen={isAssigning}
+        title="Atribuir Anjo em lote"
+        subtitle={pluralize(selected.size, 'grupo selecionado', 'grupos selecionados')}
+        onClose={() => setIsAssigning(false)}
+        onConfirm={handleBulkAngel}
+      />
 
       <GroupFormModal
         isOpen={isFormOpen}

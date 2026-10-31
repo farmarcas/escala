@@ -10,6 +10,14 @@ import {
 const admin: PlatformIdentity = { kind: 'platform', subject: 'OP-02', role: 'PLATFORM_ADMIN' };
 const analyst: PlatformIdentity = { kind: 'platform', subject: 'OP-07', role: 'PLATFORM_ANALYST' };
 
+const juliana = {
+  id: 'e1',
+  name: 'Juliana Prado',
+  jobTitle: 'Analista de relacionamento',
+  email: 'juliana.prado@farmarcas.com.br',
+  phone: null,
+};
+
 const group = (overrides: Partial<GroupDetailRecord> = {}): GroupDetailRecord => ({
   id: 'g1',
   number: 417,
@@ -22,6 +30,7 @@ const group = (overrides: Partial<GroupDetailRecord> = {}): GroupDetailRecord =>
     phone: '11900004410',
     pseudonym: 'F-1A0PR',
   },
+  angel: juliana,
   storeCount: 8,
   pdvCount: 6,
   cdCount: 2,
@@ -48,6 +57,11 @@ const makeRepo = (overrides: Partial<EconomicGroupsRepository> = {}): EconomicGr
   changeStatus: vi.fn().mockResolvedValue(group()),
   recordAuditOnce: vi.fn(),
   listAudit: vi.fn(),
+  findAngelCandidate: vi
+    .fn()
+    .mockResolvedValue({ id: 'e2', name: 'Isabela Nunes', status: 'ACTIVE' }),
+  findAngelTargets: vi.fn().mockResolvedValue([]),
+  assignAngels: vi.fn(),
   ...overrides,
 });
 
@@ -208,5 +222,97 @@ describe('economic groups · update', () => {
 
     await expect(result).rejects.toMatchObject({ code: 'OWNER_TRANSFER_REQUIRED' });
     expect(repo.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('economic groups · Anjo', () => {
+  it('deve marcar o selo NO_ANGEL em grupo sem Anjo, menos no arquivado', async () => {
+    const withoutAngel = makeRepo({
+      findByNumber: vi.fn().mockResolvedValue(group({ angel: null })),
+    });
+    const archived = makeRepo({
+      findByNumber: vi.fn().mockResolvedValue(group({ angel: null, status: 'ARCHIVED' })),
+    });
+
+    expect((await makeEconomicGroupsService(withoutAngel).get(admin, 417)).badges).toEqual([
+      'NO_ANGEL',
+    ]);
+    expect((await makeEconomicGroupsService(archived).get(admin, 417)).badges).toEqual([]);
+  });
+
+  it('deve trocar o Anjo e registrar o anterior e o novo', async () => {
+    const repo = makeRepo();
+
+    await makeEconomicGroupsService(repo).setAngel(admin, 417, { employeeId: 'e2' });
+
+    expect(repo.assignAngels).toHaveBeenCalledWith(admin, [
+      {
+        groupId: 'g1',
+        employeeId: 'e2',
+        audit: {
+          action: 'ANGEL_CHANGED',
+          summary: 'Anjo trocado de Juliana Prado para Isabela Nunes',
+        },
+      },
+    ]);
+  });
+
+  it('deve retirar o Anjo', async () => {
+    const repo = makeRepo();
+
+    await makeEconomicGroupsService(repo).setAngel(admin, 417, { employeeId: null });
+
+    expect(vi.mocked(repo.assignAngels).mock.calls[0]?.[1][0]).toMatchObject({
+      employeeId: null,
+      audit: { action: 'ANGEL_REMOVED', summary: 'Anjo retirado (era Juliana Prado)' },
+    });
+  });
+
+  it('não deve gravar nada quando o Anjo escolhido já é o atual', async () => {
+    const repo = makeRepo();
+
+    await makeEconomicGroupsService(repo).setAngel(admin, 417, { employeeId: 'e1' });
+
+    expect(repo.assignAngels).not.toHaveBeenCalled();
+  });
+
+  it('deve recusar funcionário desligado e grupo arquivado', async () => {
+    const terminated = makeRepo({
+      findAngelCandidate: vi.fn().mockResolvedValue({ id: 'e2', name: 'X', status: 'TERMINATED' }),
+    });
+    const archived = makeRepo({
+      findByNumber: vi.fn().mockResolvedValue(group({ status: 'ARCHIVED' })),
+    });
+
+    await expect(
+      makeEconomicGroupsService(terminated).setAngel(admin, 417, { employeeId: 'e2' }),
+    ).rejects.toMatchObject({ code: 'EMPLOYEE_NOT_ACTIVE' });
+    await expect(
+      makeEconomicGroupsService(archived).setAngel(admin, 417, { employeeId: 'e2' }),
+    ).rejects.toMatchObject({ code: 'GROUP_ARCHIVED' });
+  });
+
+  it('deve atribuir em lote e pular arquivados, não achados e quem já tem esse Anjo', async () => {
+    const repo = makeRepo({
+      findAngelTargets: vi.fn().mockResolvedValue([
+        { id: 'g1', number: 1, status: 'ACTIVE', angel: null },
+        { id: 'g2', number: 2, status: 'ARCHIVED', angel: null },
+        { id: 'g3', number: 3, status: 'ACTIVE', angel: { id: 'e2', name: 'Isabela Nunes' } },
+      ]),
+    });
+
+    const result = await makeEconomicGroupsService(repo).bulkAngel(admin, {
+      numbers: [1, 2, 3, 4],
+      employeeId: 'e2',
+    });
+
+    expect(result).toEqual({ changed: 1, skipped: 3 });
+    expect(vi.mocked(repo.assignAngels).mock.calls[0]?.[1]).toEqual([
+      {
+        groupId: 'g1',
+        employeeId: 'e2',
+        audit: { action: 'ANGEL_ASSIGNED', summary: 'Anjo definido: Isabela Nunes' },
+      },
+    ]);
   });
 });

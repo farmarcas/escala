@@ -7,11 +7,13 @@ import type { StoresRepository } from '../stores/stores.service.js';
 import { makeEconomicGroupsController } from './economic-groups.controller.js';
 import { economicGroupsRepository } from './economic-groups.repository.js';
 import {
+  bulkAngelRequest,
   createGroupRequest,
   getGroupRequest,
   groupStatsRequest,
   listGroupAuditRequest,
   listGroupsRequest,
+  setAngelRequest,
   statusChangeRequest,
   updateGroupRequest,
 } from './economic-groups.schemas.js';
@@ -33,6 +35,7 @@ export const economicGroupsRouter = (
   router.get('/', validate(listGroupsRequest), controller.list);
   router.get('/stats', validate(groupStatsRequest), controller.stats);
   router.post('/', adminOnly, validate(createGroupRequest), controller.create);
+  router.post('/bulk-angel', adminOnly, validate(bulkAngelRequest), controller.bulkAngel);
   router.get('/:number', validate(getGroupRequest), controller.get);
   router.patch('/:number', adminOnly, validate(updateGroupRequest), controller.update);
   router.post(
@@ -41,6 +44,7 @@ export const economicGroupsRouter = (
     validate(statusChangeRequest),
     controller.changeStatus,
   );
+  router.put('/:number/angel', adminOnly, validate(setAngelRequest), controller.setAngel);
   router.get('/:number/audit-events', validate(listGroupAuditRequest), controller.listAudit);
   router.get('/:number/stores', validate(listGroupStoresRequest), stores.listByGroup);
   router.post(

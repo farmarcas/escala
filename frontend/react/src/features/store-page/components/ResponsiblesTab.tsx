@@ -5,8 +5,8 @@ import type { StorePage } from '../types';
 
 const cardLabel = 'text-xs font-bold uppercase tracking-[0.4px] text-muted-foreground';
 
-// Responsáveis: proprietário (cadastro do grupo); Anjo Farmarcas e responsáveis da loja chegam
-// com os cadastros de funcionários de cada lado (US11).
+// Responsáveis: proprietário (cadastro do grupo), Anjo Farmarcas (Funcionários do Backoffice);
+// os responsáveis da loja chegam com o cadastro de funcionários do grupo.
 export function ResponsiblesTab({ page }: { page: StorePage }) {
   const owner = page.owner;
   return (
@@ -43,10 +43,27 @@ export function ResponsiblesTab({ page }: { page: StorePage }) {
         <p className="mb-3 text-xs text-muted-foreground">
           Analista da Farmarcas que acompanha a loja
         </p>
-        <StatusBadge tone="neutral">Em desenvolvimento</StatusBadge>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Chega com o menu Funcionários do Backoffice, onde ficam os funcionários da Farmarcas.
-        </p>
+        {page.angel ? (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[13px]">
+            <dt className="text-muted-foreground">Nome</dt>
+            <dd className="font-semibold">{page.angel.name}</dd>
+            <dt className="text-muted-foreground">Cargo</dt>
+            <dd>{page.angel.jobTitle}</dd>
+            <dt className="text-muted-foreground">E-mail</dt>
+            <dd className="truncate">{page.angel.email}</dd>
+            <dt className="text-muted-foreground">Telefone</dt>
+            <dd>{page.angel.phone ? formatPhone(page.angel.phone) : '—'}</dd>
+          </dl>
+        ) : (
+          <>
+            <StatusBadge tone="warning">Sem Anjo</StatusBadge>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {page.side === 'platform'
+                ? 'O grupo desta loja ainda não tem Anjo. Defina no detalhe do grupo.'
+                : 'A Farmarcas ainda não definiu quem acompanha o seu grupo.'}
+            </p>
+          </>
+        )}
       </Card>
       <Card className="p-5">
         <p className={cardLabel}>Responsáveis da loja</p>

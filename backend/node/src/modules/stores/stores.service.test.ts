@@ -27,6 +27,7 @@ const store = (overrides: Partial<StoreRecord> = {}): StoreRecord => ({
   code: 92,
   groupNumber: 417,
   groupName: 'Grupo Aurora Norte',
+  angel: null,
   brand: { id: input.brandId, name: 'Rede Aurora', status: 'ACTIVE' },
   name: input.name,
   legalName: null,

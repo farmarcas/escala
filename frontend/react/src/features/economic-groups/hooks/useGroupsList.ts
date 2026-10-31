@@ -4,15 +4,26 @@ import { buildQuery, type Paginated } from '@/lib/api';
 import { UFS } from '@/lib/uf';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import type { GroupStats, GroupSummary, GroupsFilter } from '../types';
+import { NO_ANGEL_FILTER, type GroupStats, type GroupSummary, type GroupsFilter } from '../types';
 
 const PAGE_SIZE = 20;
 
-const INITIAL: GroupsFilter = { status: 'all', search: '', uf: '', brandId: '', page: 1 };
+const INITIAL: GroupsFilter = {
+  status: 'all',
+  search: '',
+  uf: '',
+  brandId: '',
+  angel: '',
+  page: 1,
+};
 
-// Atalho do Início: /grupos?uf=SP já abre filtrado pelo estado.
+// Atalhos com filtro na URL: /grupos?uf=SP (Início) e /grupos?semAnjo=1 (Funcionários).
 function initialFilter(params: URLSearchParams): GroupsFilter {
-  return { ...INITIAL, uf: UFS.find((uf) => uf === params.get('uf')) ?? '' };
+  return {
+    ...INITIAL,
+    uf: UFS.find((uf) => uf === params.get('uf')) ?? '',
+    angel: params.get('semAnjo') ? NO_ANGEL_FILTER : '',
+  };
 }
 
 export function useGroupsList() {
@@ -27,6 +38,8 @@ export function useGroupsList() {
     search,
     uf: filter.uf,
     brandId: filter.brandId,
+    angelId: filter.angel && filter.angel !== NO_ANGEL_FILTER ? filter.angel : undefined,
+    withoutAngel: filter.angel === NO_ANGEL_FILTER ? 'true' : undefined,
   })}`;
   const list = useApiQuery<Paginated<GroupSummary>>(path);
   const stats = useApiQuery<GroupStats>('/economic-groups/stats');
@@ -41,7 +54,11 @@ export function useGroupsList() {
     setPage: (page: number) => setFilter((current) => ({ ...current, page })),
     clearFilters: () => setFilter(INITIAL),
     hasFilters:
-      filter.status !== 'all' || filter.search !== '' || filter.uf !== '' || filter.brandId !== '',
+      filter.status !== 'all' ||
+      filter.search !== '' ||
+      filter.uf !== '' ||
+      filter.brandId !== '' ||
+      filter.angel !== '',
     groups: list.data?.data ?? [],
     meta: list.data?.meta,
     isLoading: list.isLoading && !list.data,

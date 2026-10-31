@@ -6,6 +6,8 @@ export type Store = {
   code: number;
   groupNumber: number;
   groupName: string;
+  // Anjo do grupo: as lojas mostram o Anjo do grupo.
+  angel: { id: string; name: string; jobTitle: string; email: string; phone: string | null } | null;
   brand: { id: string; name: string; status: 'ACTIVE' | 'HISTORICAL' };
   name: string;
   legalName: string | null;

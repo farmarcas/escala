@@ -9,6 +9,7 @@ const PLATFORM_LINKS: MobileLink[] = [
   { to: '/grupos', label: 'Grupos' },
   { to: '/lojas', label: 'Lojas' },
   { to: '/marcas', label: 'Marcas' },
+  { to: '/funcionarios', label: 'Funcionários' },
 ];
 
 const TENANT_LINKS: MobileLink[] = [{ to: '/grupo/lojas', label: 'Minhas lojas' }];

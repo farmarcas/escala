@@ -34,7 +34,12 @@ export function GroupDetailPage() {
             onFormOpenChange={setIsAddingStore}
           />
         )}
-        renderAudit={({ group }) => <AuditTrail key={group.updatedAt} groupNumber={group.number} />}
+        renderAudit={({ group }) => (
+          <AuditTrail
+            key={group.updatedAt}
+            path={`/economic-groups/${group.number}/audit-events`}
+          />
+        )}
       />
     </PageBody>
   );

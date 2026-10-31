@@ -70,11 +70,27 @@ export const listGroupsQuery = z
     search: searchQuery,
     uf: z.enum(UFS).optional(),
     brandId: z.string().uuid().optional(),
+    angelId: z.string().uuid().optional(),
+    withoutAngel: z.enum(['true']).optional(),
   })
   .strict();
 export type ListGroupsQuery = z.infer<typeof listGroupsQuery>;
 
+// Anjo do grupo (spec 003, US2): null retira o Anjo.
+export const setAngelSchema = z.object({ employeeId: z.string().uuid().nullable() }).strict();
+export type SetAngelInput = z.infer<typeof setAngelSchema>;
+
+export const bulkAngelSchema = z
+  .object({
+    numbers: z.array(z.number().int().positive()).min(1).max(200),
+    employeeId: z.string().uuid(),
+  })
+  .strict();
+export type BulkAngelInput = z.infer<typeof bulkAngelSchema>;
+
 export const listGroupsRequest = requestSchema({ query: listGroupsQuery });
+export const setAngelRequest = requestSchema({ body: setAngelSchema, params: groupNumberParam });
+export const bulkAngelRequest = requestSchema({ body: bulkAngelSchema });
 export const groupStatsRequest = requestSchema({});
 export const createGroupRequest = requestSchema({ body: createGroupSchema });
 export const getGroupRequest = requestSchema({ params: groupNumberParam });
