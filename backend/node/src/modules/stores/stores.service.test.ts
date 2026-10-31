@@ -68,6 +68,9 @@ const makeRepo = (overrides: Partial<StoresRepository> = {}): StoresRepository =
   setBlock: vi.fn().mockResolvedValue(store()),
   findByCodes: vi.fn().mockResolvedValue([]),
   setBlockMany: vi.fn(),
+  count: vi.fn().mockResolvedValue(0),
+  facetValues: vi.fn().mockResolvedValue([]),
+  remindMany: vi.fn(),
   ...overrides,
 });
 

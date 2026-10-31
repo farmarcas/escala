@@ -7,7 +7,12 @@ import {
   missingFieldsByStore,
   refreshCompleteness,
 } from '../store-page/store-page.repository.js';
-import type { StoreFilter } from './stores.schemas.js';
+import {
+  NO_ANGEL,
+  STORE_ALERTS,
+  type StoreFilter,
+  type StoreStatusValue,
+} from './stores.schemas.js';
 import type { PlatformIdentity } from '../../shared/identity/identity.js';
 import type { AuditEntry } from '../audit/audit.types.js';
 import type { StoreHistoryChange, StoreRecord, StoresRepository } from './stores.service.js';
@@ -42,7 +47,13 @@ const storeSelect = () =>
     blockedAt: true,
     blockedReason: true,
     createdAt: true,
-    updatedAt: true,
+    // Última edição ou validação: base do alerta de dados desatualizados.
+    history: {
+      where: { kind: { in: ['EDIT', 'VALIDATION'] } },
+      orderBy: { createdAt: 'desc' },
+      take: 1,
+      select: { createdAt: true },
+    },
     completenessFilled: true,
     completenessTotal: true,
     validatedAt: true,
@@ -68,11 +79,14 @@ type StoreRow = Prisma.StoreGetPayload<{ select: ReturnType<typeof storeSelect> 
 
 const isOutdated = (row: {
   status: string;
-  updatedAt: Date;
+  history: { createdAt: Date }[];
   validatedAt: Date | null;
   createdAt: Date;
 }) => {
-  const lastTouch = Math.max(row.updatedAt.getTime(), (row.validatedAt ?? row.createdAt).getTime());
+  const lastTouch = Math.max(
+    (row.history[0]?.createdAt ?? row.createdAt).getTime(),
+    (row.validatedAt ?? row.createdAt).getTime(),
+  );
   return row.status !== 'INACTIVE' && lastTouch < Date.now() - OUTDATED_DAYS * 86_400_000;
 };
 
@@ -114,21 +128,34 @@ const whereOf = (filter: StoreFilter): Prisma.StoreWhereInput => {
   const where: Prisma.StoreWhereInput = { deletedAt: null };
   if (filter.groupId) where.economicGroupId = filter.groupId;
   if (filter.type) where.type = filter.type;
-  const group: Prisma.EconomicGroupWhereInput = {};
-  if (filter.status === 'OPERATING') {
-    where.status = { not: 'INACTIVE' };
-    group.status = { not: 'ARCHIVED' };
-  } else if (filter.status) {
-    where.status = filter.status;
+  const and: Prisma.StoreWhereInput[] = [];
+  // Situação: os valores somam; "Em operação" é ativa ou pendente de grupo não arquivado.
+  if (filter.status) {
+    const plain = filter.status.filter((value) => value !== 'OPERATING') as StoreStatusValue[];
+    const or: Prisma.StoreWhereInput[] = [];
+    if (plain.length) or.push({ status: { in: plain } });
+    if (filter.status.includes('OPERATING')) {
+      or.push({ status: { not: 'INACTIVE' }, economicGroup: { status: { not: 'ARCHIVED' } } });
+    }
+    and.push({ OR: or });
   }
-  // O Anjo é do grupo: as lojas mostram o Anjo do grupo (spec 003, US2).
-  if (filter.angelId) group.angelEmployeeId = filter.angelId;
-  if (Object.keys(group).length > 0) where.economicGroup = group;
-  if (filter.brandId) where.brandId = filter.brandId;
-  if (filter.stage) where.stage = filter.stage;
+  // O Anjo é do grupo: as lojas mostram o Anjo do grupo (spec 003, US2). NONE = sem Anjo.
+  if (filter.angelId) {
+    const ids = filter.angelId.filter((value) => value !== NO_ANGEL);
+    const or: Prisma.StoreWhereInput[] = [];
+    if (ids.length) or.push({ economicGroup: { angelEmployeeId: { in: ids } } });
+    if (filter.angelId.includes(NO_ANGEL)) or.push({ economicGroup: { angelEmployeeId: null } });
+    and.push({ OR: or });
+  }
+  if (filter.brandId) where.brandId = { in: filter.brandId };
+  if (filter.stage) where.stage = { in: filter.stage };
   if (filter.codes) where.code = { in: filter.codes };
-  if (filter.blocked) where.blockedAt = filter.blocked === 'true' ? { not: null } : null;
-  if (filter.uf) where.uf = filter.uf;
+  // Bloqueadas e desbloqueadas juntas = sem filtro.
+  if (filter.blocked?.length === 1) {
+    where.blockedAt = filter.blocked[0] === 'true' ? { not: null } : null;
+  }
+  if (filter.uf) where.uf = { in: filter.uf };
+  if (and.length) where.AND = and;
   if (filter.search) {
     const text = { contains: filter.search, mode: 'insensitive' } as const;
     const digits = filter.search.replace(/\D/g, '');
@@ -166,28 +193,37 @@ const COMPLETENESS_SQL: Record<string, Prisma.Sql> = {
 };
 
 // Filtros de governança viram uma lista de ids calculada no banco.
-const governanceIds = async (tx: Tx, filter: StoreFilter): Promise<string[] | null> => {
-  const parts: Prisma.Sql[] = [];
-  if (filter.completeness) parts.push(COMPLETENESS_SQL[filter.completeness]!);
-  if (filter.validation) parts.push(VALIDATION_SQL[filter.validation]!);
-  if (filter.hasOpenRequest) {
-    parts.push(
-      Prisma.sql`EXISTS (SELECT 1 FROM store_change_requests r WHERE r.store_id = stores.id AND r.status = 'OPEN')`,
-    );
-  }
-  if (filter.outdated) {
-    parts.push(
-      Prisma.sql`status <> 'INACTIVE' AND greatest(updated_at, coalesce(validated_at, created_at))
-                 < now() - interval '${Prisma.raw(String(OUTDATED_DAYS))} days'`,
-    );
-  }
-  if (filter.docAlert) {
-    parts.push(
-      Prisma.sql`EXISTS (SELECT 1 FROM store_documents d WHERE d.store_id = stores.id
+const ALERT_SQL: Record<(typeof STORE_ALERTS)[number], Prisma.Sql> = {
+  request: Prisma.sql`EXISTS (SELECT 1 FROM store_change_requests r WHERE r.store_id = stores.id AND r.status = 'OPEN')`,
+  // Última mudança de verdade: edição ou validação no histórico da loja (o recálculo automático
+  // do preenchimento mexe em updated_at e não conta).
+  outdated: Prisma.sql`status <> 'INACTIVE' AND greatest(
+                 coalesce((SELECT max(h.created_at) FROM store_history h
+                            WHERE h.store_id = stores.id AND h.kind IN ('EDIT', 'VALIDATION')),
+                          stores.created_at),
+                 coalesce(stores.validated_at, stores.created_at))
+               < now() - interval '${Prisma.raw(String(OUTDATED_DAYS))} days'`,
+  doc: Prisma.sql`EXISTS (SELECT 1 FROM store_documents d WHERE d.store_id = stores.id
                   AND d.superseded_at IS NULL AND d.request_id IS NULL
                   AND d.valid_until < now() + interval '${Prisma.raw(String(ALERT_DAYS))} days')`,
-    );
-  }
+};
+
+// Valores do mesmo campo somam (ou).
+const anyOf = (parts: Prisma.Sql[]) =>
+  Prisma.sql`(${Prisma.join(
+    parts.map((part) => Prisma.sql`(${part})`),
+    ' OR ',
+  )})`;
+
+const governanceIds = async (tx: Tx, filter: StoreFilter): Promise<string[] | null> => {
+  const parts: Prisma.Sql[] = [];
+  if (filter.completeness) parts.push(anyOf(filter.completeness.map((v) => COMPLETENESS_SQL[v]!)));
+  if (filter.validation) parts.push(anyOf(filter.validation.map((v) => VALIDATION_SQL[v]!)));
+  if (filter.alert) parts.push(anyOf(filter.alert.map((v) => ALERT_SQL[v])));
+  // Atalhos antigos (links da Visão geral): cada um é um "e".
+  if (filter.hasOpenRequest) parts.push(ALERT_SQL.request);
+  if (filter.outdated) parts.push(ALERT_SQL.outdated);
+  if (filter.docAlert) parts.push(ALERT_SQL.doc);
   if (parts.length === 0) return null;
   const rows = await tx.$queryRaw<{ id: string }[]>`
     SELECT id FROM stores WHERE deleted_at IS NULL AND ${Prisma.join(parts, ' AND ')}`;
@@ -267,6 +303,8 @@ export const storesRepository: StoresRepository = {
           partial: number;
           low: number;
           validation_attention: number;
+          outdated: number;
+          active_unblocked: number;
         }[]
       >`
         SELECT count(*)::int AS total,
@@ -283,7 +321,9 @@ export const storesRepository: StoresRepository = {
                (count(*) FILTER (WHERE ${COMPLETENESS_SQL.complete!}))::int AS complete,
                (count(*) FILTER (WHERE ${COMPLETENESS_SQL.partial!}))::int AS partial,
                (count(*) FILTER (WHERE ${COMPLETENESS_SQL.low!}))::int AS low,
-               (count(*) FILTER (WHERE ${VALIDATION_SQL.attention!}))::int AS validation_attention
+               (count(*) FILTER (WHERE ${VALIDATION_SQL.attention!}))::int AS validation_attention,
+               (count(*) FILTER (WHERE ${ALERT_SQL.outdated}))::int AS outdated,
+               (count(*) FILTER (WHERE status = 'ACTIVE' AND blocked_at IS NULL))::int AS active_unblocked
           FROM stores
          WHERE deleted_at IS NULL`;
       const alerts = await tx.$queryRaw<
@@ -320,6 +360,8 @@ export const storesRepository: StoresRepository = {
           low: row?.low ?? 0,
         },
         validationAttention: row?.validation_attention ?? 0,
+        outdated: row?.outdated ?? 0,
+        activeUnblocked: row?.active_unblocked ?? 0,
         docAlerts: { docs: alert?.docs ?? 0, stores: alert?.doc_stores ?? 0 },
         openRequests: { requests: alert?.requests ?? 0, stores: alert?.request_stores ?? 0 },
       };
@@ -401,6 +443,91 @@ export const storesRepository: StoresRepository = {
       await recordAudit(tx, actor, audit);
       await addHistory(tx, [historyOf(actor, id, store.economicGroupId, audit, history)]);
       return requireOne(tx, id);
+    });
+  },
+
+  count(actor, filter) {
+    return withActor(actor, async (tx) => {
+      const where = whereOf(filter);
+      const ids = await governanceIds(tx, filter);
+      if (ids) where.id = { in: ids };
+      return tx.store.count({ where });
+    });
+  },
+
+  facetValues(actor, field) {
+    return withActor(actor, async (tx) => {
+      switch (field) {
+        case 'brandId': {
+          const rows = await tx.store.findMany({
+            where: { deletedAt: null },
+            distinct: ['brandId'],
+            select: { brandId: true },
+          });
+          return rows.map((row) => row.brandId);
+        }
+        case 'uf': {
+          const rows = await tx.store.findMany({
+            where: { deletedAt: null },
+            distinct: ['uf'],
+            select: { uf: true },
+            orderBy: { uf: 'asc' },
+          });
+          return rows.map((row) => row.uf);
+        }
+        case 'angelId': {
+          const groups = await tx.economicGroup.findMany({
+            where: { deletedAt: null, stores: { some: { deletedAt: null } } },
+            distinct: ['angelEmployeeId'],
+            select: { angelEmployeeId: true },
+          });
+          const ids = groups.flatMap((group) =>
+            group.angelEmployeeId ? [group.angelEmployeeId] : [],
+          );
+          return groups.some((group) => !group.angelEmployeeId) ? [...ids, NO_ANGEL] : ids;
+        }
+        case 'stage':
+          return ['OPENED', 'SETUP', 'PROSPECTING'];
+        case 'status':
+          return ['ACTIVE', 'PENDING', 'INACTIVE'];
+        case 'blocked':
+          return ['false', 'true'];
+        case 'completeness':
+          return ['complete', 'partial', 'low'];
+        case 'validation':
+          return ['ok', 'due_soon', 'overdue', 'never'];
+        case 'alert':
+          return [...STORE_ALERTS];
+      }
+    });
+  },
+
+  remindMany(actor, ids) {
+    return withActor(actor, async (tx) => {
+      for (const id of ids) {
+        const store = await tx.store.update({
+          where: { id },
+          data: { validationRemindedAt: new Date() },
+          select: { economicGroupId: true, name: true },
+        });
+        await addHistory(tx, [
+          {
+            storeId: id,
+            economicGroupId: store.economicGroupId,
+            kind: 'REMINDER',
+            fieldLabel: 'Cobrança de validação dos dados',
+            newValue: 'Enviada ao proprietário',
+            actorKind: 'PLATFORM',
+            actorSubject: actor.subject,
+            actorRole: actor.role,
+          },
+        ]);
+        await recordAudit(tx, actor, {
+          economicGroupId: store.economicGroupId,
+          action: 'STORE_VALIDATION_REMINDED',
+          summary: `Cobrança de preenchimento e validação da loja ${store.name} (em lote)`,
+        });
+      }
     });
   },
 

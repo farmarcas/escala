@@ -55,6 +55,56 @@ describe('lote e exportação', () => {
     expect(auditB.body.data[0]).toMatchObject({ action: 'STORE_BLOCKED' });
   });
 
+  it('deve cobrar em lote, pular as validadas e registrar no histórico da loja', async () => {
+    await ownerDb.store.update({ where: { code: 3 }, data: { validatedAt: new Date() } });
+
+    const result = await request(app)
+      .post(`${BO}/stores/bulk`)
+      .set(ADMIN_HEADERS)
+      .send({ action: 'REMIND', codes: [1, 2, 3] });
+    const history = await ownerDb.storeHistory.findMany({
+      where: { kind: 'REMINDER' },
+      select: { storeId: true },
+    });
+
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({ changed: 2, skipped: 1 });
+    expect(history).toHaveLength(2);
+  });
+
+  it('bloquear em lote ainda exige motivo; cobrar não', async () => {
+    const response = await request(app)
+      .post(`${BO}/stores/bulk`)
+      .set(ADMIN_HEADERS)
+      .send({ action: 'BLOCK', codes: [1] });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('deve filtrar por vários valores do mesmo campo', async () => {
+    const both = await request(app).get(`${BO}/stores?uf=SP,MG`).set(ADMIN_HEADERS);
+    const one = await request(app).get(`${BO}/stores?uf=MG`).set(ADMIN_HEADERS);
+    const invalid = await request(app).get(`${BO}/stores?status=XX`).set(ADMIN_HEADERS);
+
+    expect(both.body.meta.total).toBe(3);
+    expect(one.body.meta.total).toBe(1);
+    expect(invalid.status).toBe(400);
+  });
+
+  it('deve contar as lojas de cada valor considerando os outros filtros', async () => {
+    const all = await request(app).get(`${BO}/stores/facets?field=uf`).set(ADMIN_HEADERS);
+    const groupA = await request(app)
+      .get(`${BO}/stores/facets?field=uf&search=101`)
+      .set(ADMIN_HEADERS);
+
+    expect(all.status).toBe(200);
+    expect(all.body.data).toEqual([
+      { value: 'MG', count: 1 },
+      { value: 'SP', count: 2 },
+    ]);
+    expect(groupA.body.data).toContainEqual({ value: 'MG', count: 0 });
+  });
+
   it('o analista não faz ação em lote', async () => {
     const response = await request(app)
       .post(`${BO}/stores/bulk`)

@@ -86,7 +86,9 @@ Mudanças em rotas que já existem:
 |---|---|---|
 | `POST /economic-groups/:number/owner-transfer` | `{ name, email, phone, justification }` | grupo com proprietário novo. 409 `GROUP_ARCHIVED`, `GROUP_HAS_NO_OWNER` |
 | `PUT /economic-groups/:number/benefit-card` | `{ holderName, holderCpf, holderBirthDate, cardNumber, storeCode }` | cartão (visão por papel). 400 CPF inválido. 409 `STORE_NOT_ACTIVE`, `STORE_NOT_IN_GROUP` |
-| `POST /stores/bulk` | `{ action: 'BLOCK' \| 'UNBLOCK', codes: number[1..200], justification }` | `{ changed, skipped }` |
+| `POST /stores/bulk` | `{ action: 'BLOCK' \| 'UNBLOCK' \| 'REMIND', codes: number[1..200], justification }` (motivo obrigatório só para bloquear e desbloquear) | `{ changed, skipped }` |
+| `GET /stores?uf=SP,MG&stage=OPENED&…` | cada filtro aceita vários valores separados por vírgula: `brandId`, `uf`, `angelId` (ou `NONE`), `status` (inclui `OPERATING`), `stage`, `blocked`, `completeness`, `validation`, `alert` (`doc`, `outdated`, `request`) | lista paginada, valores combinados com "ou" no mesmo campo e "e" entre campos |
+| `GET /stores/facets?field=uf&…` | um campo do filtro + os demais filtros | `{ field, data: [{ value, count }] }`: quantas lojas há em cada valor |
 | `GET /stores?codes=1,2,3` e `GET /stores/export?codes=…` | até 200 códigos separados por vírgula | só as lojas escolhidas ("Exportar selecionadas") |
 | `GET /stores/export` | filtros da lista | `text/csv; charset=utf-8` |
 | `GET /economic-groups/export` | filtros da lista | idem |

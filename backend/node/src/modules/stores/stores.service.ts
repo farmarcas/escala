@@ -8,6 +8,7 @@ import type {
   CreateStoreInput,
   ListStoresQuery,
   BulkBlockInput,
+  FacetField,
   StageChangeInput,
   StoreFilter,
   StoreStatusValue,
@@ -62,6 +63,10 @@ export type StoreStats = {
   avgCompleteness: number;
   completenessBands: { complete: number; partial: number; low: number };
   validationAttention: number;
+  // Em operação e sem mudança nem validação há mais de 90 dias.
+  outdated: number;
+  // Ativas e desbloqueadas (protótipo: "N ativas e desbloqueadas").
+  activeUnblocked: number;
   docAlerts: { docs: number; stores: number };
   openRequests: { requests: number; stores: number };
 };
@@ -75,6 +80,11 @@ export type StoresRepository = {
     options?: { withMissing?: boolean },
   ) => Promise<{ data: StoreRecord[]; total: number }>;
   findByCodes: (actor: PlatformIdentity, codes: number[]) => Promise<StoreRecord[]>;
+  count: (actor: PlatformIdentity, filter: StoreFilter) => Promise<number>;
+  // Opções possíveis de um campo do filtro (as fixas e as que existem nas lojas).
+  facetValues: (actor: PlatformIdentity, field: FacetField) => Promise<string[]>;
+  // Cobrança de preenchimento e validação: histórico da loja e auditoria do grupo.
+  remindMany: (actor: PlatformIdentity, ids: string[]) => Promise<void>;
   setBlockMany: (
     actor: PlatformIdentity,
     ids: string[],
@@ -242,8 +252,22 @@ export const makeStoresService = (repo: StoresRepository) => ({
 
   async bulkBlock(actor: PlatformIdentity, input: BulkBlockInput) {
     const codes = [...new Set(input.codes)];
-    const block = input.action === 'BLOCK';
     const found = await repo.findByCodes(actor, codes);
+    // Cobrar: só quem não está com a validação em dia (a página da loja tem a mesma regra).
+    if (input.action === 'REMIND') {
+      const { toChange, skipped } = splitBulk(
+        codes.length,
+        found,
+        (store) => store.validation.status !== 'ok',
+      );
+      await repo.remindMany(
+        actor,
+        toChange.map((store) => store.id),
+      );
+      return { changed: toChange.length, skipped };
+    }
+    const block = input.action === 'BLOCK';
+    const justification = input.justification ?? '';
     const { toChange, skipped } = splitBulk(
       codes.length,
       found,
@@ -253,12 +277,12 @@ export const makeStoresService = (repo: StoresRepository) => ({
       actor,
       toChange.map((store) => store.id),
       block
-        ? { blockedAt: new Date(), blockedReason: input.justification, blockedBy: actor.subject }
+        ? { blockedAt: new Date(), blockedReason: justification, blockedBy: actor.subject }
         : null,
       (store) => ({
         action: block ? 'STORE_BLOCKED' : 'STORE_UNBLOCKED',
         summary: `Loja ${formatStoreCode(store.code)} · ${store.name} ${block ? 'bloqueada' : 'desbloqueada'} em lote`,
-        justification: input.justification,
+        justification,
       }),
       {
         fieldLabel: 'Bloqueio',
@@ -267,6 +291,20 @@ export const makeStoresService = (repo: StoresRepository) => ({
       },
     );
     return { changed: toChange.length, skipped };
+  },
+
+  // Quantas lojas há em cada opção de um campo, com os outros filtros (o "+ Filtro" mostra).
+  async facets(actor: PlatformIdentity, field: FacetField, query: ListStoresQuery) {
+    const { page: _page, pageSize: _pageSize, ...filter } = query;
+    const values = await repo.facetValues(actor, field);
+    const counts = [];
+    for (const value of values) {
+      counts.push({
+        value,
+        count: await repo.count(actor, { ...filter, [field]: [value] } as StoreFilter),
+      });
+    }
+    return { field, data: counts };
   },
 
   // Todas as linhas filtradas, sem paginação (até EXPORT_LIMIT).

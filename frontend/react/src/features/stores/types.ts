@@ -52,6 +52,10 @@ export type StoreStats = {
   avgCompleteness: number;
   completenessBands: { complete: number; partial: number; low: number };
   validationAttention: number;
+  // Em operação e sem edição nem validação há mais de 90 dias.
+  outdated: number;
+  // Ativas e desbloqueadas.
+  activeUnblocked: number;
   docAlerts: { docs: number; stores: number };
   openRequests: { requests: number; stores: number };
 };

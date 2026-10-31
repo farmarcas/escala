@@ -8,6 +8,7 @@ import {
   bulkBlockRequest,
   listStoresRequest,
   stageChangeRequest,
+  storeFacetsRequest,
   storeStatsRequest,
   updateStoreRequest,
 } from './stores.schemas.js';
@@ -23,6 +24,7 @@ export const storesRouter = (repo?: StoresRepository) => {
   router.get('/', validate(listStoresRequest), controller.list);
   router.get('/stats', validate(storeStatsRequest), controller.stats);
   router.get('/export', validate(listStoresRequest), controller.exportCsv);
+  router.get('/facets', validate(storeFacetsRequest), controller.facets);
   const adminOnly = requirePlatformRole('PLATFORM_ADMIN');
   router.patch('/:id/status', adminOnly, validate(updateStoreRequest), controller.updateStatus);
   router.post('/bulk', adminOnly, validate(bulkBlockRequest), controller.bulkBlock);

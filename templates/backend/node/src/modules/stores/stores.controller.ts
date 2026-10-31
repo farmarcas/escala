@@ -10,6 +10,7 @@ import type {
   listGroupStoresRequest,
   listStoresRequest,
   stageChangeRequest,
+  storeFacetsRequest,
   updateStoreRequest,
 } from './stores.schemas.js';
 import { STORE_CSV_COLUMNS } from './stores.csv.js';
@@ -52,6 +53,12 @@ export const makeStoresController = (service: StoresService) => ({
   async bulkBlock(req: Request, res: Response) {
     const { body } = readValidated<z.infer<typeof bulkBlockRequest>>(res);
     res.json(await service.bulkBlock(readPlatformIdentity(req), body));
+  },
+
+  async facets(req: Request, res: Response) {
+    const { query } = readValidated<z.infer<typeof storeFacetsRequest>>(res);
+    const { field, ...filters } = query;
+    res.json(await service.facets(readPlatformIdentity(req), field, filters));
   },
 
   async exportCsv(req: Request, res: Response) {

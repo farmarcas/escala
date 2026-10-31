@@ -8,6 +8,8 @@ const badgeTone = {
   neutral: 'bg-subtle text-secondary-foreground',
   info: 'bg-info-soft text-info-text',
   brand: 'bg-primary-soft text-primary-hover',
+  // Bloqueada (protótipo): fundo escuro.
+  dark: 'bg-foreground text-surface',
 } as const;
 
 export type BadgeTone = keyof typeof badgeTone;

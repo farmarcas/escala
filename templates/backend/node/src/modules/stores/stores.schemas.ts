@@ -60,14 +60,19 @@ export type StageChangeInput = z.infer<typeof stageChangeSchema>;
 
 export const blockChangeSchema = z.object({ justification: reason }).strict();
 
-// Ações em lote na lista de lojas (spec 003, US7).
+// Ações em lote na lista de lojas (spec 003, US7). Bloquear e desbloquear pedem motivo;
+// cobrar o preenchimento e a validação, não.
 export const bulkBlockSchema = z
   .object({
-    action: z.enum(['BLOCK', 'UNBLOCK']),
+    action: z.enum(['BLOCK', 'UNBLOCK', 'REMIND']),
     codes: z.array(z.number().int().positive()).min(1).max(200),
-    justification: reason,
+    justification: reason.optional(),
   })
-  .strict();
+  .strict()
+  .refine((input) => input.action === 'REMIND' || Boolean(input.justification), {
+    message: 'Explique o motivo',
+    path: ['justification'],
+  });
 export type BulkBlockInput = z.infer<typeof bulkBlockSchema>;
 
 const storeCodeParam = z.object({ code: z.coerce.number().int().positive() }).strict();
@@ -79,24 +84,57 @@ const storeFilters = {
 
 export const listGroupStoresQuery = z.object({ ...paginationShape, ...storeFilters }).strict();
 
+// Filtro de vários valores (protótipo "+ Filtro"): "SP,MG" vira ["SP", "MG"]; os valores de um
+// mesmo campo somam (ou), e campos diferentes se combinam (e).
+const splitList = (value: string) => value.split(',').filter(Boolean);
+const listOf = <T extends readonly [string, ...string[]]>(values: T) =>
+  z
+    .string()
+    .transform(splitList)
+    .pipe(z.array(z.enum(values)).min(1).max(50))
+    .optional();
+
+export const NO_ANGEL = 'NONE';
+export const STORE_ALERTS = ['doc', 'outdated', 'request'] as const;
+
+export const storeFilterShape = {
+  brandId: z
+    .string()
+    .transform(splitList)
+    .pipe(z.array(z.string().uuid()).min(1).max(50))
+    .optional(),
+  // Ids de funcionário; NONE = grupo sem Anjo.
+  angelId: z
+    .string()
+    .transform(splitList)
+    .pipe(
+      z
+        .array(z.union([z.string().uuid(), z.literal(NO_ANGEL)]))
+        .min(1)
+        .max(50),
+    )
+    .optional(),
+  uf: listOf(UFS),
+  // OPERATING = rede em operação, a mesma conta do Início: ativa ou pendente, de grupo não arquivado.
+  status: listOf(['PENDING', 'ACTIVE', 'INACTIVE', 'OPERATING'] as const),
+  completeness: listOf(['complete', 'partial', 'low']),
+  validation: listOf(['ok', 'due_soon', 'overdue', 'never', 'attention']),
+  stage: listOf(['PROSPECTING', 'SETUP', 'OPENED'] as const),
+  blocked: listOf(['true', 'false']),
+  // Alerta: documento vencido ou a vencer, dados desatualizados (+90 dias), solicitação aberta.
+  alert: listOf([...STORE_ALERTS]),
+};
+
 export const listStoresQuery = z
   .object({
     ...paginationShape,
     ...storeFilters,
-    brandId: z.string().uuid().optional(),
-    angelId: z.string().uuid().optional(),
-    uf: z.enum(UFS).optional(),
-    // OPERATING = rede em operação, a mesma conta do Início: ativa ou pendente, de grupo não arquivado.
-    status: z.enum([...storeStatusSchema.options, 'OPERATING']).optional(),
-    completeness: z.enum(['complete', 'partial', 'low']).optional(),
-    validation: z.enum(['ok', 'due_soon', 'overdue', 'never', 'attention']).optional(),
+    ...storeFilterShape,
     hasOpenRequest: z.enum(['true']).optional(),
     // Documento vencido ou vencendo em até 30 dias.
     docAlert: z.enum(['true']).optional(),
     // Loja em operação sem mudança nem validação há mais de 90 dias.
     outdated: z.enum(['true']).optional(),
-    stage: storeStageSchema.optional(),
-    blocked: z.enum(['true', 'false']).optional(),
     // "Exportar selecionadas": códigos separados por vírgula (até 200).
     codes: z
       .string()
@@ -109,6 +147,23 @@ export type ListStoresQuery = z.infer<typeof listStoresQuery>;
 export type StoreFilter = Omit<ListStoresQuery, 'page' | 'pageSize'> & { groupId?: string };
 
 export const listStoresRequest = requestSchema({ query: listStoresQuery });
+
+// Quantas lojas há em cada opção de um campo, com os outros filtros aplicados.
+export const FACET_FIELDS = [
+  'brandId',
+  'uf',
+  'angelId',
+  'stage',
+  'status',
+  'blocked',
+  'completeness',
+  'validation',
+  'alert',
+] as const;
+export type FacetField = (typeof FACET_FIELDS)[number];
+export const storeFacetsRequest = requestSchema({
+  query: listStoresQuery.extend({ field: z.enum(FACET_FIELDS) }),
+});
 export const storeStatsRequest = requestSchema({});
 export const updateStoreRequest = requestSchema({ body: updateStoreSchema, params: uuidParam });
 export const stageChangeRequest = requestSchema({
