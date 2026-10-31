@@ -7,11 +7,13 @@ import type { GroupStatusValue } from '../economic-groups/economic-groups.schema
 import type {
   CreateStoreInput,
   ListStoresQuery,
+  StageChangeInput,
   StoreFilter,
   StoreStatusValue,
   StoreTypeValue,
   UpdateStoreInput,
 } from './stores.schemas.js';
+import { STAGE_LABEL, stageChange, type StoreStageValue } from './stage.js';
 
 export type StoreRecord = {
   id: string;
@@ -32,6 +34,12 @@ export type StoreRecord = {
   uf: string;
   openedAt: string | null;
   status: StoreStatusValue;
+  stage: StoreStageValue;
+  isBlocked: boolean;
+  blockedAt: Date | null;
+  blockedReason: string | null;
+  // Em operação e sem mudança nem validação há mais de 90 dias (spec 003, FR-044).
+  isOutdated: boolean;
   createdAt: Date;
   completeness: { filled: number; total: number; missing?: string[] };
   validation: { status: ValidationStatus; validatedAt: Date | null; days: number | null };
@@ -85,11 +93,34 @@ export type StoresRepository = {
     status: UpdateStoreInput['status'],
     audit: AuditEntry,
   ) => Promise<StoreRecord>;
+  findByCode: (actor: PlatformIdentity, code: number) => Promise<StoreRecord | null>;
+  // Etapa e bloqueio também entram no histórico da loja.
+  updateStage: (
+    actor: PlatformIdentity,
+    id: string,
+    data: { stage: StoreStageValue; openedAt?: string },
+    audit: AuditEntry,
+    history: StoreHistoryChange,
+  ) => Promise<StoreRecord>;
+  setBlock: (
+    actor: PlatformIdentity,
+    id: string,
+    block: { blockedAt: Date; blockedReason: string; blockedBy: string } | null,
+    audit: AuditEntry,
+    history: StoreHistoryChange,
+  ) => Promise<StoreRecord>;
+};
+
+export type StoreHistoryChange = {
+  fieldLabel: string;
+  oldValue: string | null;
+  newValue: string | null;
 };
 
 export const formatStoreCode = (code: number) => `LJ-${String(code).padStart(3, '0')}`;
 
 const groupNotFound = () => new NotFoundError('Grupo econômico não encontrado', 'GROUP_NOT_FOUND');
+const storeNotFound = () => new NotFoundError('Loja não encontrada', 'STORE_NOT_FOUND');
 
 export const makeStoresService = (repo: StoresRepository) => ({
   async list(actor: Identity, query: ListStoresQuery) {
@@ -146,6 +177,57 @@ export const makeStoresService = (repo: StoresRepository) => ({
     }));
   },
 
+  async changeStage(actor: PlatformIdentity, code: number, input: StageChangeInput) {
+    const store = await repo.findByCode(actor, code);
+    if (!store) throw storeNotFound();
+    stageChange(store.stage, input);
+    const group = await repo.findGroup(actor, store.groupNumber);
+    const from = STAGE_LABEL[store.stage];
+    const to = STAGE_LABEL[input.stage];
+    return repo.updateStage(
+      actor,
+      store.id,
+      { stage: input.stage, ...(input.stage === 'OPENED' ? { openedAt: input.openedAt } : {}) },
+      {
+        economicGroupId: group?.id ?? null,
+        action: 'STORE_STAGE_CHANGED',
+        summary: `Loja ${formatStoreCode(store.code)} · ${store.name}: etapa ${from} → ${to}`,
+        justification: input.justification ?? null,
+      },
+      { fieldLabel: 'Etapa', oldValue: from, newValue: to },
+    );
+  },
+
+  // Bloquear corta o acesso do grupo à loja; desbloquear devolve (spec 003, FR-041/042).
+  async setBlock(actor: PlatformIdentity, code: number, block: boolean, justification: string) {
+    const store = await repo.findByCode(actor, code);
+    if (!store) throw storeNotFound();
+    if (block === store.isBlocked) {
+      throw block
+        ? new ConflictError('A loja já está bloqueada', 'STORE_ALREADY_BLOCKED')
+        : new ConflictError('A loja não está bloqueada', 'STORE_NOT_BLOCKED');
+    }
+    const group = await repo.findGroup(actor, store.groupNumber);
+    return repo.setBlock(
+      actor,
+      store.id,
+      block
+        ? { blockedAt: new Date(), blockedReason: justification, blockedBy: actor.subject }
+        : null,
+      {
+        economicGroupId: group?.id ?? null,
+        action: block ? 'STORE_BLOCKED' : 'STORE_UNBLOCKED',
+        summary: `Loja ${formatStoreCode(store.code)} · ${store.name} ${block ? 'bloqueada' : 'desbloqueada'}`,
+        justification,
+      },
+      {
+        fieldLabel: 'Bloqueio',
+        oldValue: BLOCK_LABEL[String(!block) as 'true' | 'false'],
+        newValue: BLOCK_LABEL[String(block) as 'true' | 'false'],
+      },
+    );
+  },
+
   async updateStatus(actor: PlatformIdentity, id: string, input: UpdateStoreInput) {
     const store = await repo.findById(actor, id);
     if (!store) throw new NotFoundError('Loja não encontrada', 'STORE_NOT_FOUND');
@@ -169,3 +251,5 @@ export const makeStoresService = (repo: StoresRepository) => ({
 });
 
 export type StoresService = ReturnType<typeof makeStoresService>;
+
+const BLOCK_LABEL = { true: 'Bloqueada', false: 'Desbloqueada' } as const;

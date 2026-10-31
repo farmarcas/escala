@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { fieldErrors, type ApiError } from '@/lib/api';
 import { formatCnpj, formatZip, onlyDigits } from '@/lib/format';
-import type { StoreInput, StoreType } from '../types';
+import type { StoreInput, StoreStage, StoreType } from '../types';
 
-type Values = Omit<StoreInput, 'openedAt' | 'zip'> & { openedAt: string; zip: string };
+type Values = Omit<StoreInput, 'openedAt' | 'zip' | 'stage'> & {
+  openedAt: string;
+  zip: string;
+  stage: StoreStage;
+};
 
 const EMPTY: Values = {
   name: '',
@@ -17,6 +21,8 @@ const EMPTY: Values = {
   city: '',
   uf: '',
   openedAt: '',
+  // Loja nova nasce em Prospecção, a não ser que o administrador escolha outra etapa.
+  stage: 'PROSPECTING',
 };
 
 // Mensagens da API traduzidas para o campo certo.
@@ -65,6 +71,7 @@ export function useStoreForm() {
     city: values.city.trim(),
     uf: values.uf,
     ...(values.openedAt ? { openedAt: values.openedAt } : {}),
+    stage: values.stage,
   });
 
   const errorsFrom = (apiError: ApiError | null): Partial<Record<keyof Values, string>> => {

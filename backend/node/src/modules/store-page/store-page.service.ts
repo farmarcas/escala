@@ -42,10 +42,21 @@ const actorKindOf = (identity: Identity): 'PLATFORM' | 'TENANT' =>
 
 export const ownerOf = (store: StoreRow): OwnerRef => store.economicGroup.owners[0] ?? null;
 
+// Loja bloqueada pela Farmarcas some para o grupo: nem leitura nem gravação (spec 003, FR-042).
+// A Farmarcas continua vendo e alterando.
+export const assertOpenForTenant = (identity: Identity, store: { blockedAt: Date | null }) => {
+  if (identity.kind === 'tenant' && store.blockedAt) {
+    throw new AppError('Loja bloqueada pela Farmarcas', 403, 'STORE_BLOCKED', [
+      { blockedAt: store.blockedAt.toISOString() },
+    ]);
+  }
+};
+
 // Carrega a loja visível para o ator e quem está vendo. 404 inclui "loja de outro grupo".
 export const loadStore = async (tx: Tx, identity: Identity, code: number) => {
   const store = await findStoreByCode(tx, code);
   if (!store) throw storeNotFound();
+  assertOpenForTenant(identity, store);
   const viewer = viewerOf(identity, store.economicGroup.status);
   return { store, viewer, permissions: permissionsOf(viewer) };
 };
@@ -89,6 +100,11 @@ const buildPage = async (tx: Tx, store: StoreRow, viewer: Viewer) => {
       status: store.economicGroup.status,
     },
     status: store.status,
+    stage: store.stage,
+    // Bloqueio só chega aqui para a Farmarcas: o grupo nem abre loja bloqueada.
+    block: store.blockedAt
+      ? { at: store.blockedAt, reason: store.blockedReason, by: store.blockedBy }
+      : null,
     type: store.type,
     receita: {
       cnpj: store.cnpj,

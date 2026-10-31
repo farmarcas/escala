@@ -13,6 +13,13 @@ export const STORE_STATUS_LABEL: Record<string, { label: string; tone: BadgeTone
   PENDING: { label: 'Pendente no grupo', tone: 'warning' },
 };
 
+// Etapa da loja na rede (Prospecção → Montagem → Inaugurada).
+export const STAGE_LABEL: Record<string, { label: string; tone: BadgeTone }> = {
+  PROSPECTING: { label: 'Prospecção', tone: 'neutral' },
+  SETUP: { label: 'Montagem', tone: 'info' },
+  OPENED: { label: 'Inaugurada', tone: 'success' },
+};
+
 export { validationLabel } from '@/lib/governance';
 
 // Como cada campo básico é mostrado e digitado.

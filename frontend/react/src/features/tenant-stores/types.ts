@@ -8,6 +8,8 @@ export type TenantStore = {
   city: string;
   uf: string;
   status: 'PENDING' | 'ACTIVE' | 'INACTIVE';
+  // Loja bloqueada pela Farmarcas: aparece na lista, mas não abre.
+  isBlocked: boolean;
   brand: { name: string };
   completeness: { filled: number; total: number };
   validation: { status: ValidationStatus; validatedAt: string | null; days: number | null };

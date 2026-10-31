@@ -41,6 +41,11 @@ const store = (overrides: Partial<StoreRecord> = {}): StoreRecord => ({
   uf: 'SP',
   openedAt: null,
   status: 'PENDING',
+  stage: 'PROSPECTING',
+  isBlocked: false,
+  blockedAt: null,
+  blockedReason: null,
+  isOutdated: false,
   createdAt: new Date('2026-10-30T12:00:00.000Z'),
   completeness: { filled: 0, total: 22 },
   validation: { status: 'never', validatedAt: null, days: null },
@@ -58,6 +63,9 @@ const makeRepo = (overrides: Partial<StoresRepository> = {}): StoresRepository =
   isCnpjTaken: vi.fn().mockResolvedValue(false),
   create: vi.fn().mockResolvedValue(store()),
   updateStatus: vi.fn().mockResolvedValue(store({ status: 'ACTIVE' })),
+  findByCode: vi.fn().mockResolvedValue(store()),
+  updateStage: vi.fn().mockResolvedValue(store()),
+  setBlock: vi.fn().mockResolvedValue(store()),
   ...overrides,
 });
 
@@ -151,5 +159,35 @@ describe('formatStoreCode', () => {
   it('deve formatar com 3 dígitos', () => {
     expect(formatStoreCode(7)).toBe('LJ-007');
     expect(formatStoreCode(1204)).toBe('LJ-1204');
+  });
+});
+
+describe('stores service · etapa e bloqueio', () => {
+  it('deve registrar a troca de etapa na auditoria e no histórico da loja', async () => {
+    const repo = makeRepo();
+
+    await makeStoresService(repo).changeStage(admin, 92, { stage: 'SETUP' });
+
+    expect(repo.updateStage).toHaveBeenCalledWith(
+      admin,
+      's1',
+      { stage: 'SETUP' },
+      expect.objectContaining({ action: 'STORE_STAGE_CHANGED', economicGroupId: 'g1' }),
+      { fieldLabel: 'Etapa', oldValue: 'Prospecção', newValue: 'Montagem' },
+    );
+  });
+
+  it('deve bloquear com motivo e recusar bloquear de novo', async () => {
+    const repo = makeRepo();
+
+    await makeStoresService(repo).setBlock(admin, 92, true, 'Pendência financeira');
+    const call = vi.mocked(repo.setBlock).mock.calls[0];
+    expect(call?.[2]).toMatchObject({ blockedReason: 'Pendência financeira', blockedBy: 'OP-02' });
+    expect(call?.[3]).toMatchObject({ action: 'STORE_BLOCKED' });
+
+    const blocked = makeRepo({ findByCode: vi.fn().mockResolvedValue(store({ isBlocked: true })) });
+    await expect(
+      makeStoresService(blocked).setBlock(admin, 92, true, 'De novo'),
+    ).rejects.toMatchObject({ code: 'STORE_ALREADY_BLOCKED' });
   });
 });

@@ -70,12 +70,13 @@ Mudanças em rotas que já existem:
 | `PATCH /partners/:id/contacts/:contactId` | campos acima, opcionais | 200. Marcar `isPrimary` tira o principal anterior |
 | `DELETE /partners/:id/contacts/:contactId` | — | 204 |
 | `GET /partners/:id/audit-events` | `page, pageSize` | histórico do parceiro |
-| `PATCH /stores/:code/stage` | `{ stage, openedAt?, justification? }` | 200. 400 `OPENED_AT_REQUIRED`, `JUSTIFICATION_REQUIRED` |
+| `PATCH /stores/:code/stage` | `{ stage, openedAt?, justification? }` | 200. 400 `VALIDATION_ERROR` com `details` em `openedAt` (Inaugurada sem data) ou `justification` (voltar sem motivo). 409 `STAGE_UNCHANGED` |
 | `POST /stores/:code/block` | `{ justification }` | 200. 409 `STORE_ALREADY_BLOCKED` |
 | `POST /stores/:code/unblock` | `{ justification }` | 200. 409 `STORE_NOT_BLOCKED` |
 
 Mudanças em rotas que já existem:
-- `GET /stores` aceita `stage`, `blocked=true|false` e `alert=outdated`. Cada item traz `stage`, `isBlocked` e `isOutdated`.
+- `GET /stores` aceita `stage`, `blocked=true|false` e `outdated=true`. Cada item traz `stage`, `isBlocked`, `blockedAt`, `blockedReason` e `isOutdated`. A página da loja da Farmarcas traz `stage` e `block: { at, reason, by } | null`.
+- Criar loja aceita `stage` (padrão `PROSPECTING`).
 - Lado do grupo: qualquer rota da página da loja com loja bloqueada responde 403 `STORE_BLOCKED`, com `{ blockedAt }` em `details`.
 - `GET /tenant/stores` traz `isBlocked`.
 

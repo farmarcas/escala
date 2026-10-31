@@ -3,7 +3,13 @@ import { requirePlatformRole } from '../../shared/identity/authenticate.js';
 import { validate } from '../../shared/middlewares/validate.js';
 import { makeStoresController } from './stores.controller.js';
 import { storesRepository } from './stores.repository.js';
-import { listStoresRequest, storeStatsRequest, updateStoreRequest } from './stores.schemas.js';
+import {
+  blockChangeRequest,
+  listStoresRequest,
+  stageChangeRequest,
+  storeStatsRequest,
+  updateStoreRequest,
+} from './stores.schemas.js';
 import { makeStoresService, type StoresRepository } from './stores.service.js';
 
 export const makeStoresControllerFor = (repo: StoresRepository = storesRepository) =>
@@ -15,12 +21,12 @@ export const storesRouter = (repo?: StoresRepository) => {
 
   router.get('/', validate(listStoresRequest), controller.list);
   router.get('/stats', validate(storeStatsRequest), controller.stats);
-  router.patch(
-    '/:id/status',
-    requirePlatformRole('PLATFORM_ADMIN'),
-    validate(updateStoreRequest),
-    controller.updateStatus,
-  );
+  const adminOnly = requirePlatformRole('PLATFORM_ADMIN');
+  router.patch('/:id/status', adminOnly, validate(updateStoreRequest), controller.updateStatus);
+  // Etapa e bloqueio pelo código da loja (LJ-NNN), como a página da loja.
+  router.patch('/:code/stage', adminOnly, validate(stageChangeRequest), controller.changeStage);
+  router.post('/:code/block', adminOnly, validate(blockChangeRequest), controller.block);
+  router.post('/:code/unblock', adminOnly, validate(blockChangeRequest), controller.unblock);
 
   return router;
 };

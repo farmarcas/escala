@@ -9,6 +9,7 @@ import { useMutation } from '@/hooks/useMutation';
 import { cn } from '@/lib/cn';
 import { formatGroupNumber } from '@/lib/format';
 import { UF_OPTIONS } from '@/lib/uf';
+import { STAGE_OPTIONS } from '../storeLabels';
 import { useStoreForm } from '../hooks/useStoreForm';
 import type { StoreGroupContext, StoreInput, StoreType } from '../types';
 
@@ -188,6 +189,12 @@ function StoreFormDialog({ group, onClose, onCreate }: StoreFormModalProps) {
             value={form.values.openedAt}
             onChange={(event) => form.setField('openedAt', event.target.value)}
             errorMessage={errors.openedAt}
+          />
+          <SelectField
+            label="Etapa"
+            options={STAGE_OPTIONS}
+            value={form.values.stage}
+            onChange={(event) => form.setField('stage', event.target.value)}
           />
         </div>
 

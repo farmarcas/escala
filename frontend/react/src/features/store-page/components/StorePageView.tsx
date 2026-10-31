@@ -17,6 +17,7 @@ import { HistoryTab } from './HistoryTab';
 import { RequestModal } from './RequestModal';
 import { RequestsPanel } from './RequestsPanel';
 import { ResponsiblesTab } from './ResponsiblesTab';
+import { BlockModal, StageModal } from './StageBlockModals';
 import { StoreHeader } from './StoreHeader';
 import { StrategiesTab } from './StrategiesTab';
 import { SystemsTab } from './SystemsTab';
@@ -41,6 +42,8 @@ export function StorePageView({ side, code, backTo, backLabel }: StorePageViewPr
   const catalog = useCatalog(side);
   const [tab, setTab] = useState<TabKey>('data');
   const [requestType, setRequestType] = useState<RequestType | null>(null);
+  const [isChangingStage, setIsChangingStage] = useState(false);
+  const [isTogglingBlock, setIsTogglingBlock] = useState(false);
 
   if (store.isLoading) return <LoadingState label="Carregando loja" />;
   if (store.error?.code === 'STORE_NOT_FOUND') {
@@ -48,6 +51,20 @@ export function StorePageView({ side, code, backTo, backLabel }: StorePageViewPr
       <EmptyState
         title="Loja não encontrada"
         description="A loja não existe ou não está disponível para você."
+        action={
+          <Link to={backTo} className="text-sm font-semibold text-primary hover:text-primary-hover">
+            {backLabel}
+          </Link>
+        }
+      />
+    );
+  }
+  // Loja bloqueada: o grupo não abre (a API recusa); a tela explica em vez de dar erro.
+  if (store.error?.code === 'STORE_BLOCKED') {
+    return (
+      <EmptyState
+        title="Loja bloqueada pela Farmarcas"
+        description="O acesso a esta loja está suspenso. As outras lojas do grupo continuam normais. Para saber o motivo, fale com o seu Anjo Farmarcas."
         action={
           <Link to={backTo} className="text-sm font-semibold text-primary hover:text-primary-hover">
             {backLabel}
@@ -80,6 +97,20 @@ export function StorePageView({ side, code, backTo, backLabel }: StorePageViewPr
           setTab('data');
         }}
         onNewRequest={() => setRequestType(firstFreeType ?? 'CNPJ')}
+        onChangeStage={() => setIsChangingStage(true)}
+        onToggleBlock={() => setIsTogglingBlock(true)}
+      />
+      <StageModal
+        page={page}
+        isOpen={isChangingStage}
+        onClose={() => setIsChangingStage(false)}
+        onConfirm={store.changeStage}
+      />
+      <BlockModal
+        page={page}
+        isOpen={isTogglingBlock}
+        onClose={() => setIsTogglingBlock(false)}
+        onConfirm={store.setBlock}
       />
       <GovernanceCard
         page={page}

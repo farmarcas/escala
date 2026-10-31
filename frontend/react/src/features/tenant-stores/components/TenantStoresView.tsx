@@ -97,9 +97,11 @@ export function TenantStoresView({ groupName }: TenantStoresViewProps) {
                 return (
                   <Row
                     key={store.id}
-                    isDimmed={store.status === 'INACTIVE'}
-                    onOpen={() => navigate(`/grupo/lojas/${store.code}`)}
-                    openLabel={`Abrir ${store.name}`}
+                    isDimmed={store.status === 'INACTIVE' || store.isBlocked}
+                    onOpen={
+                      store.isBlocked ? undefined : () => navigate(`/grupo/lojas/${store.code}`)
+                    }
+                    openLabel={store.isBlocked ? undefined : `Abrir ${store.name}`}
                   >
                     <Cell>
                       <p className="font-semibold">{store.name}</p>
@@ -117,7 +119,16 @@ export function TenantStoresView({ groupName }: TenantStoresViewProps) {
                       {store.city}, {store.uf}
                     </Cell>
                     <Cell>
-                      <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
+                      {store.isBlocked ? (
+                        <StatusBadge
+                          tone="danger"
+                          title="A Farmarcas bloqueou o acesso a esta loja. Fale com o seu Anjo."
+                        >
+                          Bloqueada
+                        </StatusBadge>
+                      ) : (
+                        <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
+                      )}
                       {store.openRequests > 0 && (
                         <p className="mt-1 text-xs text-warning-text">
                           {store.openRequests}{' '}

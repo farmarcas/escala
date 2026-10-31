@@ -33,9 +33,10 @@ const NAV: NavItem[] = [
   { to: '/lojas', label: 'Lojas', icon: Store },
   { to: '/marcas', label: 'Marcas Farmarcas', icon: Tag },
   { to: '/funcionarios', label: 'Funcionários', icon: Users },
+  { to: '/parceiros', label: 'Parceiros', icon: Handshake },
 ];
 
-const UPCOMING: Pick<NavItem, 'label' | 'icon'>[] = [{ label: 'Parceiros', icon: Handshake }];
+const UPCOMING: Pick<NavItem, 'label' | 'icon'>[] = [];
 
 // Módulos do operador Farmarcas. Gestão 360 entra depois (protótipo "Gestão 360").
 const PLATFORM_MODULES = [

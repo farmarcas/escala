@@ -108,7 +108,26 @@ export function useStorePage(side: Side, code: number) {
     reload();
   }, [client, code, reload]);
 
+  // Etapa e bloqueio: só a Farmarcas (a API recusa o grupo).
+  const changeStage = useCallback(
+    async (input: { stage: string; openedAt?: string; justification?: string }) => {
+      await client.patch(`/stores/${code}/stage`, input);
+      reload();
+    },
+    [client, code, reload],
+  );
+
+  const setBlock = useCallback(
+    async (block: boolean, justification: string) => {
+      await client.post(`/stores/${code}/${block ? 'block' : 'unblock'}`, { justification });
+      reload();
+    },
+    [client, code, reload],
+  );
+
   return {
+    changeStage,
+    setBlock,
     page: query.data,
     isLoading: query.isLoading && !query.data,
     error: query.error,

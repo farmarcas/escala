@@ -39,8 +39,9 @@ export function HomeView() {
 
   return (
     <>
-      <div className="flex flex-wrap items-stretch gap-4">
-        <Card as="section" className="flex min-w-0 flex-[999_1_560px] flex-col overflow-hidden">
+      {/* Mapa e coluna da direita com a mesma altura (protótipo); abaixo de xl, um embaixo do outro. */}
+      <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(380px,0.42fr)]">
+        <Card as="section" className="flex min-w-0 flex-col overflow-hidden">
           <h2 className="sr-only">Mapa da rede</h2>
           <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
             <div className="max-w-full overflow-x-auto">
@@ -74,11 +75,11 @@ export function HomeView() {
           <MapLegend metric={metric} />
         </Card>
 
-        <div className="relative flex min-w-0 flex-[1_1_380px] flex-col gap-4">
+        <div className="relative flex min-w-0 flex-col gap-4">
           <RegionCards map={map} region={region} onSelect={selectRegion} />
           {uf && (
-            // No desktop o painel cobre os cartões (protótipo); no celular fica abaixo deles.
-            <div className="lg:absolute lg:inset-0 lg:z-[2] lg:flex lg:flex-col">
+            // Na tela larga o painel cobre os cartões, na altura do mapa (protótipo); na estreita fica abaixo deles.
+            <div className="xl:absolute xl:inset-0 xl:z-[2] xl:flex xl:flex-col">
               <UfPanel
                 uf={uf}
                 presence={presence.get(uf)}

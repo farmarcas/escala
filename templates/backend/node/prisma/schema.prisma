@@ -173,6 +173,29 @@ enum EmployeeStatus {
   @@map("employee_status")
 }
 
+enum PartnerType {
+  INDUSTRY
+  DISTRIBUTOR
+
+  @@map("partner_type")
+}
+
+enum PartnerStatus {
+  ACTIVE
+  INACTIVE
+
+  @@map("partner_status")
+}
+
+// Etapa da loja na rede (independente da situação: pendente, ativa, inativa).
+enum StoreStage {
+  PROSPECTING
+  SETUP
+  OPENED
+
+  @@map("store_stage")
+}
+
 enum AuditEntity {
   GROUP
   EMPLOYEE
@@ -207,7 +230,7 @@ model EconomicGroup {
   updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
   // Anjo: funcionário da Farmarcas que acompanha o grupo (um por grupo).
   angelEmployeeId String?            @map("angel_employee_id") @db.Uuid
-  angel           FarmarcasEmployee? @relation(fields: [angelEmployeeId], references: [id])
+  angel           FarmarcasEmployee? @relation(fields: [angelEmployeeId], references: [id], onDelete: Restrict)
   owners          GroupOwner[]
   stores          Store[]
   auditEvents     AuditEvent[]
@@ -244,6 +267,11 @@ model Store {
   name                 String
   type                 StoreType
   status               StoreStatus          @default(PENDING)
+  stage                StoreStage           @default(PROSPECTING)
+  // Bloqueio: corta o acesso do grupo à loja (spec 003, US4); a Farmarcas continua vendo.
+  blockedAt            DateTime?            @map("blocked_at") @db.Timestamptz(3)
+  blockedReason        String?              @map("blocked_reason")
+  blockedBy            String?              @map("blocked_by")
   // Identificação na Receita: muda só por solicitação (specs/002, camadas da loja).
   cnpj                 String               @db.Char(14)
   legalName            String?              @map("legal_name")
@@ -548,4 +576,38 @@ model FarmarcasEmployee {
   angelOf      EconomicGroup[]
 
   @@map("farmarcas_employees")
+}
+
+// Parceiro da Farmarcas: indústria ou distribuidor. Dado da plataforma, sem tenant.
+model Partner {
+  id        String           @id @default(uuid(7)) @db.Uuid
+  type      PartnerType
+  cnpj      String           @db.Char(14)
+  legalName String           @map("legal_name")
+  tradeName String           @map("trade_name")
+  status    PartnerStatus    @default(ACTIVE)
+  deletedAt DateTime?        @map("deleted_at") @db.Timestamptz(3)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  contacts  PartnerContact[]
+
+  @@map("partners")
+}
+
+// Contato comercial do parceiro; no máximo um principal (índice parcial no SQL).
+model PartnerContact {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  partnerId String    @map("partner_id") @db.Uuid
+  partner   Partner   @relation(fields: [partnerId], references: [id])
+  name      String
+  jobTitle  String?   @map("job_title")
+  email     String?
+  phone     String?
+  isPrimary Boolean   @default(false) @map("is_primary")
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([partnerId])
+  @@map("partner_contacts")
 }

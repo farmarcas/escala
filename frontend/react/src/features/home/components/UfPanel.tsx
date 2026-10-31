@@ -49,7 +49,7 @@ export function UfPanel({
     <section
       ref={panelRef}
       aria-label={`Detalhe de ${BRAZIL_GEOMETRY[uf].name}`}
-      className="overflow-y-auto rounded-lg border border-border bg-surface shadow-[0_8px_24px_-6px_rgb(6_25_56/0.18)] lg:h-full"
+      className="overflow-y-auto rounded-lg border border-border bg-surface shadow-[0_8px_24px_-6px_rgb(6_25_56/0.18)] xl:h-full"
     >
       <div className="flex items-center gap-2.5 border-b border-border px-[18px] py-3.5 shadow-[inset_4px_0_0_0_var(--color-primary)]">
         <div className="min-w-0 flex-1">

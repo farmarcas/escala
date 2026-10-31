@@ -21,7 +21,7 @@ import {
 } from '@/lib/format';
 import { UF_OPTIONS } from '@/lib/uf';
 import { useStores } from '../hooks/useStores';
-import { STORE_STATUS, STORE_TYPE } from '../storeLabels';
+import { STAGE_OPTIONS, STORE_STAGE, STORE_STATUS, STORE_TYPE } from '../storeLabels';
 import { CompletenessDonut } from './CompletenessDonut';
 
 const share = (part: number, total: number) => (total === 0 ? 0 : (part / total) * 100);
@@ -160,6 +160,25 @@ export function StoresView() {
           />
           <SelectField
             isLabelInline
+            label="Filtrar por etapa"
+            placeholder="Todas"
+            options={STAGE_OPTIONS}
+            value={list.filter.stage}
+            onChange={(event) => list.updateFilter({ stage: event.target.value })}
+          />
+          <SelectField
+            isLabelInline
+            label="Filtrar por bloqueio"
+            placeholder="Todos"
+            options={[
+              { value: 'true', label: 'Bloqueadas' },
+              { value: 'false', label: 'Desbloqueadas' },
+            ]}
+            value={list.filter.blocked}
+            onChange={(event) => list.updateFilter({ blocked: event.target.value })}
+          />
+          <SelectField
+            isLabelInline
             label="Filtrar por cadastro"
             placeholder="Todos"
             options={[
@@ -191,12 +210,22 @@ export function StoresView() {
             options={[
               { value: 'doc', label: 'Documento vencido ou a vencer' },
               { value: 'request', label: 'Solicitação em andamento' },
+              { value: 'outdated', label: 'Dados desatualizados (+90 dias)' },
             ]}
-            value={list.filter.docAlert ? 'doc' : list.filter.hasOpenRequest ? 'request' : ''}
+            value={
+              list.filter.docAlert
+                ? 'doc'
+                : list.filter.hasOpenRequest
+                  ? 'request'
+                  : list.filter.outdated
+                    ? 'outdated'
+                    : ''
+            }
             onChange={(event) =>
               list.updateFilter({
                 docAlert: event.target.value === 'doc' ? 'true' : '',
                 hasOpenRequest: event.target.value === 'request' ? 'true' : '',
+                outdated: event.target.value === 'outdated' ? 'true' : '',
               })
             }
           />
@@ -227,7 +256,7 @@ export function StoresView() {
           />
         )}
         {!list.isLoading && !list.error && list.stores.length > 0 && (
-          <Table label="Lojas da rede" minWidth="1500px">
+          <Table label="Lojas da rede" minWidth="1720px">
             <thead>
               <tr>
                 <HeaderCell>GE</HeaderCell>
@@ -239,7 +268,11 @@ export function StoresView() {
                 <HeaderCell title="Pessoa da Farmarcas que acompanha o grupo da loja">
                   Anjo
                 </HeaderCell>
-                <HeaderCell>Status</HeaderCell>
+                <HeaderCell>Etapa</HeaderCell>
+                <HeaderCell>Situação</HeaderCell>
+                <HeaderCell title="Loja bloqueada pela Farmarcas: o grupo perde o acesso a ela">
+                  Bloqueio
+                </HeaderCell>
                 <HeaderCell>Cadastro</HeaderCell>
                 <HeaderCell>Validação</HeaderCell>
               </tr>
@@ -295,6 +328,11 @@ export function StoresView() {
                       {store.angel?.name ?? <span className="text-muted-foreground">—</span>}
                     </Cell>
                     <Cell>
+                      <StatusBadge tone={STORE_STAGE[store.stage].tone} size="sm">
+                        {STORE_STAGE[store.stage].label}
+                      </StatusBadge>
+                    </Cell>
+                    <Cell>
                       <StatusBadge tone={status.tone} title={status.title}>
                         {status.label}
                       </StatusBadge>
@@ -302,6 +340,24 @@ export function StoresView() {
                         <p className="mt-1 text-xs text-warning-text">
                           {store.openRequests}{' '}
                           {store.openRequests === 1 ? 'solicitação' : 'solicitações'}
+                        </p>
+                      )}
+                    </Cell>
+                    <Cell>
+                      {store.isBlocked ? (
+                        <StatusBadge
+                          tone="danger"
+                          size="sm"
+                          title={store.blockedReason ?? undefined}
+                        >
+                          Bloqueada
+                        </StatusBadge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                      {store.isOutdated && (
+                        <p className="mt-1 whitespace-nowrap text-xs text-warning-text">
+                          Dados +90 dias
                         </p>
                       )}
                     </Cell>

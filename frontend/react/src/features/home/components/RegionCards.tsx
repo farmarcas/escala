@@ -52,7 +52,8 @@ export function RegionCards({ map, region, onSelect }: RegionCardsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    // Os 6 cartões se esticam até a altura do mapa (3 linhas iguais).
+    <div className="grid flex-1 grid-cols-2 gap-3 xl:grid-rows-3">
       {cards.map((card) => {
         const isSelected = card.key === region;
         return (

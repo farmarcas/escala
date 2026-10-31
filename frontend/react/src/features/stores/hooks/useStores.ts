@@ -19,6 +19,9 @@ export type StoresFilter = {
   validation: string;
   hasOpenRequest: string;
   docAlert: string;
+  outdated: string;
+  stage: string;
+  blocked: string;
 };
 
 const INITIAL: StoresFilter = {
@@ -32,6 +35,9 @@ const INITIAL: StoresFilter = {
   validation: '',
   hasOpenRequest: '',
   docAlert: '',
+  outdated: '',
+  stage: '',
+  blocked: '',
 };
 
 // Links da Visão geral e do Início chegam com filtro na URL

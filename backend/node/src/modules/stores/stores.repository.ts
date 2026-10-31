@@ -2,9 +2,18 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { withActor, type Tx } from '../../shared/database/with-actor.js';
 import { recordAudit } from '../audit/audit.repository.js';
 import { validationStatus } from '../store-page/completeness.js';
-import { missingFieldsByStore, refreshCompleteness } from '../store-page/store-page.repository.js';
+import {
+  addHistory,
+  missingFieldsByStore,
+  refreshCompleteness,
+} from '../store-page/store-page.repository.js';
 import type { StoreFilter } from './stores.schemas.js';
-import type { StoreRecord, StoresRepository } from './stores.service.js';
+import type { PlatformIdentity } from '../../shared/identity/identity.js';
+import type { AuditEntry } from '../audit/audit.types.js';
+import type { StoreHistoryChange, StoreRecord, StoresRepository } from './stores.service.js';
+
+// Loja em operação sem mudança de cadastro nem validação há mais deste prazo (spec 003, R9).
+const OUTDATED_DAYS = 90;
 
 // Documento com alerta: vencido ou vencendo nos próximos 30 dias.
 const ALERT_DAYS = 30;
@@ -29,7 +38,11 @@ const storeSelect = () =>
     uf: true,
     openedAt: true,
     status: true,
+    stage: true,
+    blockedAt: true,
+    blockedReason: true,
     createdAt: true,
+    updatedAt: true,
     completenessFilled: true,
     completenessTotal: true,
     validatedAt: true,
@@ -53,6 +66,16 @@ const storeSelect = () =>
 
 type StoreRow = Prisma.StoreGetPayload<{ select: ReturnType<typeof storeSelect> }>;
 
+const isOutdated = (row: {
+  status: string;
+  updatedAt: Date;
+  validatedAt: Date | null;
+  createdAt: Date;
+}) => {
+  const lastTouch = Math.max(row.updatedAt.getTime(), (row.validatedAt ?? row.createdAt).getTime());
+  return row.status !== 'INACTIVE' && lastTouch < Date.now() - OUTDATED_DAYS * 86_400_000;
+};
+
 const toRecord = (row: StoreRow): StoreRecord => ({
   id: row.id,
   code: row.code,
@@ -72,6 +95,11 @@ const toRecord = (row: StoreRow): StoreRecord => ({
   uf: row.uf,
   openedAt: row.openedAt ? row.openedAt.toISOString().slice(0, 10) : null,
   status: row.status,
+  stage: row.stage,
+  isBlocked: row.blockedAt !== null,
+  blockedAt: row.blockedAt,
+  blockedReason: row.blockedReason,
+  isOutdated: isOutdated(row),
   createdAt: row.createdAt,
   completeness: { filled: row.completenessFilled, total: row.completenessTotal },
   validation: {
@@ -97,6 +125,8 @@ const whereOf = (filter: StoreFilter): Prisma.StoreWhereInput => {
   if (filter.angelId) group.angelEmployeeId = filter.angelId;
   if (Object.keys(group).length > 0) where.economicGroup = group;
   if (filter.brandId) where.brandId = filter.brandId;
+  if (filter.stage) where.stage = filter.stage;
+  if (filter.blocked) where.blockedAt = filter.blocked === 'true' ? { not: null } : null;
   if (filter.uf) where.uf = filter.uf;
   if (filter.search) {
     const text = { contains: filter.search, mode: 'insensitive' } as const;
@@ -144,6 +174,12 @@ const governanceIds = async (tx: Tx, filter: StoreFilter): Promise<string[] | nu
       Prisma.sql`EXISTS (SELECT 1 FROM store_change_requests r WHERE r.store_id = stores.id AND r.status = 'OPEN')`,
     );
   }
+  if (filter.outdated) {
+    parts.push(
+      Prisma.sql`status <> 'INACTIVE' AND greatest(updated_at, coalesce(validated_at, created_at))
+                 < now() - interval '${Prisma.raw(String(OUTDATED_DAYS))} days'`,
+    );
+  }
   if (filter.docAlert) {
     parts.push(
       Prisma.sql`EXISTS (SELECT 1 FROM store_documents d WHERE d.store_id = stores.id
@@ -159,6 +195,25 @@ const governanceIds = async (tx: Tx, filter: StoreFilter): Promise<string[] | nu
 
 const requireOne = async (tx: Tx, id: string): Promise<StoreRecord> =>
   toRecord(await tx.store.findUniqueOrThrow({ where: { id }, select: storeSelect() }));
+
+const historyOf = (
+  actor: PlatformIdentity,
+  storeId: string,
+  economicGroupId: string,
+  audit: AuditEntry,
+  change: StoreHistoryChange,
+) => ({
+  storeId,
+  economicGroupId,
+  kind: 'EDIT' as const,
+  fieldLabel: change.fieldLabel,
+  oldValue: change.oldValue,
+  newValue: change.newValue,
+  justification: audit.justification ?? null,
+  actorKind: 'PLATFORM' as const,
+  actorSubject: actor.subject,
+  actorRole: actor.role,
+});
 
 export const storesRepository: StoresRepository = {
   list(actor, filter, page, pageSize) {
@@ -315,6 +370,45 @@ export const storesRepository: StoresRepository = {
       await recordAudit(tx, actor, audit(created.code));
       await refreshCompleteness(tx, created.id);
       return requireOne(tx, created.id);
+    });
+  },
+
+  findByCode(actor, code) {
+    return withActor(actor, async (tx) => {
+      const row = await tx.store.findFirst({
+        where: { code, deletedAt: null },
+        select: storeSelect(),
+      });
+      return row ? toRecord(row) : null;
+    });
+  },
+
+  updateStage(actor, id, data, audit, history) {
+    return withActor(actor, async (tx) => {
+      const store = await tx.store.update({
+        where: { id },
+        data: {
+          stage: data.stage,
+          ...(data.openedAt ? { openedAt: new Date(`${data.openedAt}T00:00:00.000Z`) } : {}),
+        },
+        select: { economicGroupId: true },
+      });
+      await recordAudit(tx, actor, audit);
+      await addHistory(tx, [historyOf(actor, id, store.economicGroupId, audit, history)]);
+      return requireOne(tx, id);
+    });
+  },
+
+  setBlock(actor, id, block, audit, history) {
+    return withActor(actor, async (tx) => {
+      const store = await tx.store.update({
+        where: { id },
+        data: block ?? { blockedAt: null, blockedReason: null, blockedBy: null },
+        select: { economicGroupId: true },
+      });
+      await recordAudit(tx, actor, audit);
+      await addHistory(tx, [historyOf(actor, id, store.economicGroupId, audit, history)]);
+      return requireOne(tx, id);
     });
   },
 

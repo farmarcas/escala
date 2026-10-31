@@ -1,5 +1,5 @@
 import type { BadgeTone } from '@/components/ui/StatusBadge';
-import type { StoreStatus, StoreType } from './types';
+import type { StoreStage, StoreStatus, StoreType } from './types';
 
 export const STORE_STATUS: Record<StoreStatus, { label: string; tone: BadgeTone; title?: string }> =
   {
@@ -16,3 +16,15 @@ export const STORE_TYPE: Record<StoreType, { label: string; tone: BadgeTone; tit
   PDV: { label: 'PDV', tone: 'neutral', title: 'Ponto de venda' },
   CD: { label: 'CD', tone: 'info', title: 'Centro de distribuição' },
 };
+
+// Etapa da loja na rede: independente da situação (pendente, ativa, inativa).
+export const STORE_STAGE: Record<StoreStage, { label: string; tone: BadgeTone }> = {
+  PROSPECTING: { label: 'Prospecção', tone: 'neutral' },
+  SETUP: { label: 'Montagem', tone: 'info' },
+  OPENED: { label: 'Inaugurada', tone: 'success' },
+};
+
+export const STAGE_OPTIONS = (Object.keys(STORE_STAGE) as StoreStage[]).map((value) => ({
+  value,
+  label: STORE_STAGE[value].label,
+}));

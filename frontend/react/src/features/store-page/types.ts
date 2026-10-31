@@ -144,6 +144,9 @@ export type StorePage = {
     email: string | null;
     phone: string | null;
   } | null;
+  stage: 'PROSPECTING' | 'SETUP' | 'OPENED';
+  // Só a Farmarcas recebe: o grupo nem abre loja bloqueada.
+  block: { at: string; reason: string | null; by: string | null } | null;
   // Anjo do grupo: pessoa da Farmarcas que acompanha a loja.
   angel: { name: string; jobTitle: string; email: string; phone: string | null } | null;
   documentAlerts: number;

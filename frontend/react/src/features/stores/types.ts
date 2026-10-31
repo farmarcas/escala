@@ -1,5 +1,6 @@
 export type StoreType = 'PDV' | 'CD';
 export type StoreStatus = 'PENDING' | 'ACTIVE' | 'INACTIVE';
+export type StoreStage = 'PROSPECTING' | 'SETUP' | 'OPENED';
 
 export type Store = {
   id: string;
@@ -21,6 +22,13 @@ export type Store = {
   uf: string;
   openedAt: string | null;
   status: StoreStatus;
+  // Etapa na rede e bloqueio pela Farmarcas (spec 003, US4).
+  stage: StoreStage;
+  isBlocked: boolean;
+  blockedAt: string | null;
+  blockedReason: string | null;
+  // Em operação e sem mudança nem validação há mais de 90 dias.
+  isOutdated: boolean;
   createdAt: string;
   // missing: campos vazios (vem na lista da rede).
   completeness: { filled: number; total: number; missing?: string[] };
@@ -60,6 +68,7 @@ export type StoreInput = {
   city: string;
   uf: string;
   openedAt?: string;
+  stage?: StoreStage;
 };
 
 // O que as lojas precisam saber do grupo (vem da página, sem importar a feature de grupos).

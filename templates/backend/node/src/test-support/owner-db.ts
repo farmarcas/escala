@@ -27,7 +27,7 @@ export const resetBackoffice = async () => {
     `TRUNCATE store_custom_entries, store_free_fields, store_free_sections, store_catalog_entries, store_opening_hours,
               store_document_files, store_documents, store_change_request_events, store_change_requests,
               store_history, audit_events, stores, group_owners, economic_groups, brands, catalog_items,
-              farmarcas_employees
+              farmarcas_employees, partner_contacts, partners
      RESTART IDENTITY CASCADE`,
   );
 };

@@ -142,66 +142,66 @@ Entrega em quatro fatias. Ao fim de cada fatia, os testes passam e a tela é con
 
 ## Phase 6: Base
 
-- [ ] T050 `schema.prisma`:
+- [x] T050 `schema.prisma`:
   - enums `PartnerType`, `PartnerStatus` e `StoreStage`;
   - models `Partner` e `PartnerContact`;
   - `Store.stage`, `blockedAt`, `blockedReason` e `blockedBy`.
-- [ ] T051 Migration `<ts>_backoffice_fase2_p2`:
+- [x] T051 Migration `<ts>_backoffice_fase2_p2`:
   - CNPJ único parcial;
   - contato principal único parcial;
   - CHECK de motivo quando bloqueada;
   - RLS só da plataforma em `partners` e `partner_contacts`;
   - backfill de `stage` (`OPENED` se `opened_at`).
   - Permissões em `db-setup.ts`.
-- [ ] T052 Seed `seeds/<ts>_parceiros_e_lojas.sql`, idempotente:
+- [x] T052 Seed `seeds/<ts>_parceiros_e_lojas.sql`, idempotente:
   - cerca de 10 parceiros fictícios (indústrias e distribuidores) com contatos, um deles sem principal;
   - lojas de exemplo em Prospecção e Montagem;
   - uma loja bloqueada.
 
 ## Phase 7: US3 — Parceiros
 
-- [ ] T060 [P] [US3] Regra pura `src/modules/partners/primary-contact.ts` + teste: marcar principal tira o anterior; exige e-mail ou telefone.
-- [ ] T061 [US3] `src/modules/partners/`, com as rotas da Fatia 2 em `contracts/api.md`:
+- [x] T060 [P] [US3] Regra pura `src/modules/partners/primary-contact.ts` + teste: marcar principal tira o anterior; exige e-mail ou telefone.
+- [x] T061 [US3] `src/modules/partners/`, com as rotas da Fatia 2 em `contracts/api.md`:
   - lista com abas por tipo, stats, detalhe, criar, editar, status, contatos e histórico;
   - CNPJ validado com `shared/br/cnpj.ts`;
   - escrita só do admin.
-- [ ] T062 [US3] Teste de integração `partners.routes.integration.test.ts`: CNPJ inválido e repetido, contato principal único, analista 403, tenant 403, histórico.
-- [ ] T063 [P] [US3] Tela `src/features/partners/`:
+- [x] T062 [US3] Teste de integração `partners.routes.integration.test.ts`: CNPJ inválido e repetido, contato principal único, analista 403, tenant 403, histórico.
+- [x] T063 [P] [US3] Tela `src/features/partners/`:
   - KPIs, abas Todos / Indústrias / Distribuidores, busca, filtro de situação e tabela;
   - `PartnerFormModal`;
   - `PartnerDetailView`, com Dados, Contatos (`ContactFormModal`, remover, marcar principal) e Histórico.
-- [ ] T064 [US3] Rotas `/parceiros` e `/parceiros/:id`. "Parceiros" sai de "Em desenvolvimento".
+- [x] T064 [US3] Rotas `/parceiros` e `/parceiros/:id`. "Parceiros" sai de "Em desenvolvimento".
 
 ## Phase 8: US4 — Etapa e bloqueio da loja
 
-- [ ] T070 [P] [US4] Regra pura `src/modules/stores/stage.ts` + teste:
+- [x] T070 [P] [US4] Regra pura `src/modules/stores/stage.ts` + teste:
   - avançar é livre;
   - voltar exige justificativa;
   - `OPENED` exige `openedAt`.
-- [ ] T071 [US4] API:
+- [x] T071 [US4] API:
   - `PATCH /stores/:code/stage`;
   - `POST /stores/:code/block` e `/unblock`;
   - auditoria do grupo e histórico da loja;
   - filtros `stage`, `blocked` e `alert=outdated` (R9, prazo em constante);
   - `isBlocked` e `isOutdated` nas visões.
-- [ ] T072 [US4] Corte do grupo:
+- [x] T072 [US4] Corte do grupo:
   - `store-page.service.ts` `loadStore` recusa 403 `STORE_BLOCKED` para tenant;
   - mesma checagem nas rotas que resolvem a loja por id (ação em solicitação, documentos, download);
   - `GET /tenant/stores` traz `isBlocked`.
-- [ ] T073 [US4] Testes de integração:
+- [x] T073 [US4] Testes de integração:
   - etapa (avançar, voltar sem motivo, Inaugurada sem data);
   - bloquear e desbloquear com auditoria;
   - tenant recebe 403 em leitura e gravação da loja bloqueada, e as outras lojas seguem normais;
   - filtro "desatualizada".
-- [ ] T074 [P] [US4] Tela do operador:
+- [x] T074 [P] [US4] Tela do operador:
   - colunas Etapa, Situação e Bloqueio e os filtros correspondentes em `StoresView`;
   - alerta "Dados desatualizados (+90 dias)" no filtro;
   - no cabeçalho da página da loja: etapa com "Mudar etapa" (`StageModal`) e "Bloquear / Desbloquear" (`BlockModal`, com motivo, via portal).
   - Etapa no formulário de nova loja.
-- [ ] T075 [P] [US4] Tela do grupo:
+- [x] T075 [P] [US4] Tela do grupo:
   - "Minhas lojas" mostra o selo "Bloqueada", sem link;
   - a página da loja trata `STORE_BLOCKED` com a mensagem "Loja bloqueada pela Farmarcas".
-- [ ] T076 [US4] Conferir no navegador o roteiro "Fatia 2" de `quickstart.md`.
+- [x] T076 [US4] Conferir no navegador o roteiro "Fatia 2" de `quickstart.md`.
 
 ---
 

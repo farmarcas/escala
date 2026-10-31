@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, FilePlus2, Pencil } from 'lucide-react';
+import { ArrowLeft, FilePlus2, Lock, Pencil } from 'lucide-react';
 import { usePageTitle } from '@/components/layout/PageTitle';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { formatGroupNumber, formatStoreCode } from '@/lib/format';
-import { STORE_STATUS_LABEL } from '../labels';
+import { formatDate, formatGroupNumber, formatStoreCode } from '@/lib/format';
+import { STAGE_LABEL, STORE_STATUS_LABEL } from '../labels';
 import type { StorePage } from '../types';
 
 type StoreHeaderProps = {
@@ -14,6 +14,9 @@ type StoreHeaderProps = {
   isEditing: boolean;
   onEdit: () => void;
   onNewRequest: () => void;
+  // Só a Farmarcas (administrador): etapa e bloqueio.
+  onChangeStage: () => void;
+  onToggleBlock: () => void;
 };
 
 export function StoreHeader({
@@ -23,8 +26,12 @@ export function StoreHeader({
   isEditing,
   onEdit,
   onNewRequest,
+  onChangeStage,
+  onToggleBlock,
 }: StoreHeaderProps) {
   const status = STORE_STATUS_LABEL[page.status] ?? STORE_STATUS_LABEL.ACTIVE!;
+  const stage = STAGE_LABEL[page.stage];
+  const canManage = page.side === 'platform' && !page.isReadOnly;
   usePageTitle(page.basic.name ?? page.receita.legalName ?? undefined);
   const sideText =
     page.side === 'tenant'
@@ -50,12 +57,29 @@ export function StoreHeader({
         <StatusBadge tone={page.type === 'CD' ? 'info' : 'neutral'} size="sm">
           {page.type}
         </StatusBadge>
+        {stage && (
+          <StatusBadge tone={stage.tone} title="Etapa da loja na rede">
+            {stage.label}
+          </StatusBadge>
+        )}
         <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
+        {page.block && <StatusBadge tone="danger">Bloqueada</StatusBadge>}
         <span className="rounded-full bg-subtle px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
           {sideText}
         </span>
         <div className="flex-1" />
         <div className="flex flex-wrap gap-2">
+          {canManage && (
+            <>
+              <Button variant="secondary" onClick={onChangeStage}>
+                Mudar etapa
+              </Button>
+              <Button variant={page.block ? 'secondary' : 'danger-outline'} onClick={onToggleBlock}>
+                <Lock aria-hidden="true" className="size-4" />
+                {page.block ? 'Desbloquear' : 'Bloquear loja'}
+              </Button>
+            </>
+          )}
           {page.permissions.canEditBasic && !isEditing && (
             <Button variant="secondary" onClick={onEdit}>
               <Pencil aria-hidden="true" className="size-4" />
@@ -70,6 +94,16 @@ export function StoreHeader({
           )}
         </div>
       </div>
+      {page.block && (
+        <p
+          role="status"
+          className="rounded-md border border-destructive-border bg-destructive-soft px-4 py-2.5 text-[13px] text-destructive-text"
+        >
+          Loja bloqueada em {formatDate(page.block.at)}
+          {page.block.by ? ` por ${page.block.by}` : ''}. O grupo não consegue abrir nem alterar
+          esta loja. Motivo: {page.block.reason ?? '—'}
+        </p>
+      )}
       <p className="text-sm text-muted-foreground">
         {page.receita.legalName ?? 'Razão social não informada'} · {page.group.name} · GE{' '}
         {formatGroupNumber(page.group.number)}

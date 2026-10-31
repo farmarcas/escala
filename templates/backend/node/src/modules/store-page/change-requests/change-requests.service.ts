@@ -18,7 +18,7 @@ import {
   updateStoreVersioned,
   type StoreRow,
 } from '../store-page.repository.js';
-import { historyActor, loadStore, ownerOf } from '../store-page.service.js';
+import { assertOpenForTenant, historyActor, loadStore, ownerOf } from '../store-page.service.js';
 import type { CreateChangeRequestInput } from './change-requests.schemas.js';
 import { transition, type RequestAction, type RequestState } from './transition.js';
 import { REQUEST_TYPES, REQUEST_VALUES, TAX_REGIME_LABELS, type RequestType } from './types.js';
@@ -208,6 +208,7 @@ const loadRequest = async (tx: Tx, identity: Identity, id: string) => {
     include: storeInclude,
   });
   if (!store) throw notFound();
+  assertOpenForTenant(identity, store);
   return { row, store, viewer: viewerOf(identity, store.economicGroup.status) };
 };
 

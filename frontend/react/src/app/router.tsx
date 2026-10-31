@@ -8,6 +8,8 @@ import { GroupsPage } from './GroupsPage';
 import { HomePage } from './HomePage';
 import { NotFoundPage } from './NotFoundPage';
 import { OverviewPage } from './OverviewPage';
+import { PartnerDetailPage } from './PartnerDetailPage';
+import { PartnersPage } from './PartnersPage';
 import { RootLayout, type RouteHandle } from './RootLayout';
 import { StorePage } from './StorePage';
 import { StoresPage } from './StoresPage';
@@ -66,6 +68,16 @@ export const router = createBrowserRouter([
           { label: 'Funcionários', to: '/funcionarios' },
           { label: 'Funcionário' },
         ]),
+      },
+      {
+        path: '/parceiros',
+        element: <PartnersPage />,
+        handle: handle(() => [{ label: 'Parceiros' }]),
+      },
+      {
+        path: '/parceiros/:id',
+        element: <PartnerDetailPage />,
+        handle: handle(() => [{ label: 'Parceiros', to: '/parceiros' }, { label: 'Parceiro' }]),
       },
       {
         path: '*',
