@@ -10,7 +10,7 @@ export function NotFoundPage() {
         description="O endereço não existe no Backoffice."
         action={
           <Link to="/" className="text-sm font-semibold text-primary hover:text-primary-hover">
-            Ir para a visão geral
+            Ir para o início
           </Link>
         }
       />

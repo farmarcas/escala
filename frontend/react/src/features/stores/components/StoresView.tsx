@@ -140,6 +140,7 @@ export function StoresView() {
             label="Filtrar por status"
             placeholder="Todos"
             options={[
+              { value: 'OPERATING', label: 'Em operação' },
               { value: 'ACTIVE', label: 'Ativa' },
               { value: 'PENDING', label: 'Pendente no grupo' },
               { value: 'INACTIVE', label: 'Inativa' },

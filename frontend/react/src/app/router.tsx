@@ -3,6 +3,7 @@ import { formatGroupNumber, formatStoreCode } from '@/lib/format';
 import { BrandsPage } from './BrandsPage';
 import { GroupDetailPage } from './GroupDetailPage';
 import { GroupsPage } from './GroupsPage';
+import { HomePage } from './HomePage';
 import { NotFoundPage } from './NotFoundPage';
 import { OverviewPage } from './OverviewPage';
 import { RootLayout, type RouteHandle } from './RootLayout';
@@ -18,7 +19,12 @@ export const router = createBrowserRouter([
   {
     element: <RootLayout />,
     children: [
-      { path: '/', element: <OverviewPage />, handle: handle(() => [{ label: 'Visão geral' }]) },
+      { path: '/', element: <HomePage />, handle: handle(() => [{ label: 'Início' }]) },
+      {
+        path: '/visao-geral',
+        element: <OverviewPage />,
+        handle: handle(() => [{ label: 'Visão geral' }]),
+      },
       {
         path: '/grupos',
         element: <GroupsPage />,

@@ -4,7 +4,8 @@ import { cn } from '@/lib/cn';
 type MobileLink = { to: string; label: string; end?: boolean };
 
 const PLATFORM_LINKS: MobileLink[] = [
-  { to: '/', label: 'Visão geral', end: true },
+  { to: '/', label: 'Início', end: true },
+  { to: '/visao-geral', label: 'Visão geral' },
   { to: '/grupos', label: 'Grupos' },
   { to: '/lojas', label: 'Lojas' },
   { to: '/marcas', label: 'Marcas' },

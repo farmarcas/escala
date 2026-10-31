@@ -42,6 +42,18 @@
   --color-info-soft: #e0f6f8;
   --color-info-text: #006b7a;
 
+  /* Mapa do Início: escala sequencial de 5 faixas + "sem presença" (protótipo Home Mapa). */
+  --color-map-empty: #eef1f4;
+  --color-map-1: #ffe6d5;
+  --color-map-2: #ffc299;
+  --color-map-3: #ff9a57;
+  --color-map-4: #f2700f;
+  --color-map-5: #b84200;
+  /* Séries categóricas (divisão por marca); a 4ª ("Outras") usa --color-control. */
+  --color-series-1: #f25c05;
+  --color-series-2: #006ff7;
+  --color-series-3: #31c072;
+
   --color-border: #e5e8eb;
   --color-ring: #f25c05;
   --color-overlay: rgb(6 25 56 / 0.4);

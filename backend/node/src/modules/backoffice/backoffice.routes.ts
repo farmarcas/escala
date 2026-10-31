@@ -9,6 +9,7 @@ import { brandsRouter } from '../brands/brands.routes.js';
 import type { BrandsRepository } from '../brands/brands.service.js';
 import { economicGroupsRouter } from '../economic-groups/economic-groups.routes.js';
 import type { EconomicGroupsRepository } from '../economic-groups/economic-groups.service.js';
+import { homeRouter } from '../home/home.routes.js';
 import { overviewRouter } from '../overview/overview.routes.js';
 import { storePageRouter } from '../store-page/store-page.routes.js';
 import { storesRouter } from '../stores/stores.routes.js';
@@ -32,6 +33,7 @@ export const backofficeRouter = (deps: BackofficeDeps) => {
     res.json({ subject, role, kind });
   });
 
+  router.use('/home', homeRouter());
   router.use('/overview', overviewRouter());
   router.use('/brands', brandsRouter(deps.brandsRepository));
   router.use(

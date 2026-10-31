@@ -4,6 +4,7 @@ import {
   BarChart3,
   Building2,
   ChevronDown,
+  Map as MapIcon,
   Handshake,
   LayoutGrid,
   LogOut,
@@ -26,7 +27,8 @@ export type ShellVariant = 'platform' | 'tenant';
 const TENANT_NAV: NavItem[] = [{ to: '/grupo/lojas', label: 'Minhas lojas', icon: Store }];
 
 const NAV: NavItem[] = [
-  { to: '/', label: 'Visão geral', icon: BarChart3, end: true },
+  { to: '/', label: 'Início', icon: MapIcon, end: true },
+  { to: '/visao-geral', label: 'Visão geral', icon: BarChart3 },
   { to: '/grupos', label: 'Grupos econômicos', icon: Building2 },
   { to: '/lojas', label: 'Lojas', icon: Store },
   { to: '/marcas', label: 'Marcas Farmarcas', icon: Tag },

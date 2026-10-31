@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { buildQuery, type Paginated } from '@/lib/api';
+import { UFS } from '@/lib/uf';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import type { GroupStats, GroupSummary, GroupsFilter } from '../types';
@@ -8,8 +10,14 @@ const PAGE_SIZE = 20;
 
 const INITIAL: GroupsFilter = { status: 'all', search: '', uf: '', brandId: '', page: 1 };
 
+// Atalho do Início: /grupos?uf=SP já abre filtrado pelo estado.
+function initialFilter(params: URLSearchParams): GroupsFilter {
+  return { ...INITIAL, uf: UFS.find((uf) => uf === params.get('uf')) ?? '' };
+}
+
 export function useGroupsList() {
-  const [filter, setFilter] = useState<GroupsFilter>(INITIAL);
+  const [params] = useSearchParams();
+  const [filter, setFilter] = useState<GroupsFilter>(() => initialFilter(params));
   const search = useDebouncedValue(filter.search.trim());
 
   const path = `/economic-groups${buildQuery({

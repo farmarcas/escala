@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { UFS } from '@/lib/uf';
 import { buildQuery, type Paginated } from '@/lib/api';
 import { useApiQuery } from '@/hooks/useApiQuery';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -31,10 +32,12 @@ const INITIAL: StoresFilter = {
   docAlert: '',
 };
 
-// Links da Visão geral chegam com filtro na URL (?validacao=attention, ?status=PENDING, ?solicitacao=1).
+// Links da Visão geral e do Início chegam com filtro na URL
+// (?validacao=attention, ?status=PENDING, ?solicitacao=1, ?uf=SP).
 function initialFilter(params: URLSearchParams): StoresFilter {
   return {
     ...INITIAL,
+    uf: UFS.find((uf) => uf === params.get('uf')) ?? '',
     validation: params.get('validacao') ?? '',
     status: params.get('status') ?? '',
     hasOpenRequest: params.get('solicitacao') ? 'true' : '',

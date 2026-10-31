@@ -79,7 +79,12 @@ const whereOf = (filter: StoreFilter): Prisma.StoreWhereInput => {
   const where: Prisma.StoreWhereInput = { deletedAt: null };
   if (filter.groupId) where.economicGroupId = filter.groupId;
   if (filter.type) where.type = filter.type;
-  if (filter.status) where.status = filter.status;
+  if (filter.status === 'OPERATING') {
+    where.status = { not: 'INACTIVE' };
+    where.economicGroup = { status: { not: 'ARCHIVED' } };
+  } else if (filter.status) {
+    where.status = filter.status;
+  }
   if (filter.brandId) where.brandId = filter.brandId;
   if (filter.uf) where.uf = filter.uf;
   if (filter.search) {
