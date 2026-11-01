@@ -313,6 +313,7 @@ A aba **Histórico** junta tudo: edições, solicitações, documentos, validaç
 
 - **FR-040**: Estrutura, horário, serviços, sistema de demanda, ferramentas de boas práticas, PBMs e seções livres conforme a US5.
 - **FR-041**: Estratégias conforme a US6: o grupo define, a Farmarcas vê.
+- **FR-041a**: A aba Estratégias segue o protótipo "Loja Detalhe": estrutura, funcionamento, serviços, sistema de demanda, ferramentas de boas práticas, PBMs, estratégias comerciais e seções livres, cada um no seu cartão. A aba Dados fica com identificação, rede, contato e endereço popular. Tudo (inclusive as estratégias, só pelo grupo) muda em "Editar dados básicos", que continua na aba Estratégias quando aberto nela.
 - **FR-042**: Mobiliário conforme a US7: Trade nunca maior que o total.
 - **FR-043**: Ferramentas externas conforme a US8: o grupo preenche, a Farmarcas mantém o catálogo e a negociação.
 - **FR-044**: Canais conforme a US9.

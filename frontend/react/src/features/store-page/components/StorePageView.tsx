@@ -80,6 +80,7 @@ export function StorePageView({ side, code, backTo, backLabel }: StorePageViewPr
   }
 
   const page = store.page;
+  const save = () => editor.save(store.save, store.setStrategies);
   const busyTypes = requests.requests.map((request) => request.type);
   const firstFreeType = (['CNPJ', 'ADDRESS', 'BRAND', 'TAX_REGIME'] as RequestType[]).find(
     (type) => !busyTypes.includes(type),
@@ -94,7 +95,8 @@ export function StorePageView({ side, code, backTo, backLabel }: StorePageViewPr
         isEditing={editor.isEditing}
         onEdit={() => {
           editor.start();
-          setTab('data');
+          // Como no protótipo: na aba Estratégias a edição acontece ali mesmo.
+          if (tab !== 'strategies') setTab('data');
         }}
         onNewRequest={() => setRequestType(firstFreeType ?? 'CNPJ')}
         onChangeStage={() => setIsChangingStage(true)}
@@ -147,14 +149,13 @@ export function StorePageView({ side, code, backTo, backLabel }: StorePageViewPr
             <DataTab
               page={page}
               editor={editor}
-              catalog={catalog}
               openRequestTypes={busyTypes}
               onRequest={setRequestType}
-              onSave={() => editor.save(store.save)}
+              onSave={save}
             />
           )}
           {tab === 'strategies' && (
-            <StrategiesTab page={page} catalog={catalog} onSave={store.setStrategies} />
+            <StrategiesTab page={page} editor={editor} catalog={catalog} onSave={save} />
           )}
           {tab === 'furniture' && (
             <FurnitureTab page={page} catalog={catalog} onSave={store.setFurniture} />

@@ -45,7 +45,8 @@ function draftOf(page: StorePage): Draft {
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 const sorted = (ids: string[]) => [...ids].sort();
 
-// Estado da edição dos dados básicos e da estrutura (horário, catálogos, seções livres):
+// Estado da edição dos dados básicos e da estrutura (horário, catálogos, seções livres,
+// estratégias):
 // rascunho, motivo (Farmarcas), alterações e erros.
 export function useBasicEditor(page: StorePage | undefined) {
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -53,6 +54,7 @@ export function useBasicEditor(page: StorePage | undefined) {
   const [hours, setHours] = useState<OpeningHour[] | null>(null);
   const [selections, setSelections] = useState<Selections | null>(null);
   const [freeSections, setFreeSections] = useState<FreeSection[] | null>(null);
+  const [strategies, setStrategies] = useState<string[] | null>(null);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<ApiError | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -116,7 +118,12 @@ export function useBasicEditor(page: StorePage | undefined) {
       (result.freeSections ? 1 : 0)
     );
   })();
-  const changeCount = Object.keys(changes()).length + structureCount;
+  // Estratégias vão por rota própria; só o grupo altera.
+  const strategiesChanged =
+    strategies !== null &&
+    Boolean(page?.permissions.canEditStrategies) &&
+    !same(sorted(strategies), sorted(page?.strategies.map((item) => item.itemId) ?? []));
+  const changeCount = Object.keys(changes()).length + structureCount + (strategiesChanged ? 1 : 0);
   const needsReason = Boolean(page?.permissions.requiresReason);
   const canSave = changeCount > 0 && (!needsReason || reason.trim().length > 0) && !isSaving;
 
@@ -156,6 +163,21 @@ export function useBasicEditor(page: StorePage | undefined) {
           : current,
       ),
     setFreeSections,
+    // Seção livre nova no fim; serve também logo depois de start() (mesmo clique).
+    addFreeSection: () =>
+      setFreeSections((current) => [
+        ...(current ?? (page ? sectionsOf(page) : [])),
+        { title: 'Nova seção', fields: [{ label: '', value: '' }] },
+      ]),
+    strategies,
+    toggleStrategy: (id: string) =>
+      setStrategies((current) =>
+        current
+          ? current.includes(id)
+            ? current.filter((item) => item !== id)
+            : [...current, id]
+          : current,
+      ),
     start: () => {
       if (!page) return;
       setDraft(draftOf(page));
@@ -163,6 +185,7 @@ export function useBasicEditor(page: StorePage | undefined) {
       setHours(page.hours.map((hour) => ({ ...hour })));
       setSelections({ ...page.selections });
       setFreeSections(sectionsOf(page));
+      setStrategies(page.strategies.map((item) => item.itemId));
       setReason('');
       setError(null);
     },
@@ -172,6 +195,7 @@ export function useBasicEditor(page: StorePage | undefined) {
       setHours(null);
       setSelections(null);
       setFreeSections(null);
+      setStrategies(null);
       setError(null);
     },
     setField: (key: BasicKey, raw: string) => {
@@ -179,28 +203,34 @@ export function useBasicEditor(page: StorePage | undefined) {
       const value = kind === 'phone' ? formatPhone(raw) : kind === 'zip' ? formatZip(raw) : raw;
       setDraft((current) => (current ? { ...current, [key]: value } : current));
     },
-    // Envia dados básicos e estrutura juntos; só o que mudou.
+    // Envia dados básicos e estrutura juntos, depois as estratégias; só o que mudou.
     save: async (
       persist: (
         changes: Record<string, unknown>,
         version: number,
         reason?: string,
       ) => Promise<void>,
+      persistStrategies: (itemIds: string[]) => Promise<void>,
     ) => {
       if (!page || !canSave) return;
       setIsSaving(true);
       setError(null);
       try {
-        await persist(
-          { basic: changes(), ...structureChanges() },
-          page.version,
-          needsReason ? reason.trim() : undefined,
-        );
+        const basic = changes();
+        if (Object.keys(basic).length > 0 || structureCount > 0) {
+          await persist(
+            { basic, ...structureChanges() },
+            page.version,
+            needsReason ? reason.trim() : undefined,
+          );
+        }
+        if (strategiesChanged && strategies) await persistStrategies(strategies);
         setDraft(null);
         setStructure(null);
         setHours(null);
         setSelections(null);
         setFreeSections(null);
+        setStrategies(null);
       } catch (caught) {
         setError(toApiError(caught));
       } finally {

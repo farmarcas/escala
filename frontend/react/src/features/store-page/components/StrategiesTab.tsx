@@ -1,107 +1,123 @@
-import { useState } from 'react';
 import { Check } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { InlineAlert } from '@/components/ui/States';
-import { useMutation } from '@/hooks/useMutation';
 import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/format';
+import type { BasicEditor } from '../hooks/useBasicEditor';
 import type { Catalog } from '../hooks/useCatalog';
 import type { StorePage } from '../types';
+import { EditBar } from './EditBar';
+import { SectionCard } from './SectionCard';
+import { FreeSectionCards, StructureSection } from './StructureSection';
 
 type StrategiesTabProps = {
   page: StorePage;
+  editor: BasicEditor;
   catalog: Catalog;
-  onSave: (itemIds: string[]) => Promise<void>;
+  onSave: () => void;
 };
 
-// Estratégias da loja: o grupo define; a Farmarcas vê (M1 RN-C17).
-export function StrategiesTab({ page, catalog, onSave }: StrategiesTabProps) {
-  const current = page.strategies.map((item) => item.itemId);
-  const [draft, setDraft] = useState<string[] | null>(null);
-  const { run, isPending, error } = useMutation();
-  const canEdit = page.permissions.canEditStrategies;
-  const selected = draft ?? current;
-  const hasChanges = draft !== null && [...draft].sort().join() !== [...current].sort().join();
+// Aba Estratégias (protótipo "Loja Detalhe"): estrutura, funcionamento, serviços, sistema, PBMs,
+// estratégias comerciais e seções livres, cada um no seu cartão. Tudo muda em "Editar dados
+// básicos", com histórico.
+export function StrategiesTab({ page, editor, catalog, onSave }: StrategiesTabProps) {
+  return (
+    <div>
+      <EditBar editor={editor} onSave={onSave} />
+      <div className="flex flex-col gap-4 rounded-b-lg bg-background p-4">
+        <StructureSection page={page} editor={editor} catalog={catalog} />
+        <CommercialStrategies page={page} editor={editor} catalog={catalog} />
+        <FreeSectionCards page={page} editor={editor} />
+      </div>
+    </div>
+  );
+}
 
-  const toggle = (id: string) =>
-    setDraft((value) => {
-      const base = value ?? current;
-      return base.includes(id) ? base.filter((item) => item !== id) : [...base, id];
-    });
-
-  const save = async () => {
-    if (draft && (await run(() => onSave(draft)))) setDraft(null);
+// "Abrir mais horas ou dias · usada no módulo Escala": o que vem depois do "·" vira etiqueta.
+function splitDescription(description: string | null) {
+  const [text, usage] = (description ?? '').split(' · ');
+  return {
+    text: text || null,
+    usage: usage ? usage.charAt(0).toUpperCase() + usage.slice(1) : null,
   };
+}
+
+// Estratégias comerciais: o grupo define; a Farmarcas vê e não altera (M1 RN-C17).
+function CommercialStrategies({
+  page,
+  editor,
+  catalog,
+}: {
+  page: StorePage;
+  editor: BasicEditor;
+  catalog: Catalog;
+}) {
+  const canToggle = editor.isEditing && page.permissions.canEditStrategies;
+  const selected = (canToggle && editor.strategies) || page.strategies.map((item) => item.itemId);
+  const description = canToggle
+    ? 'Marque ou desmarque e salve'
+    : page.side === 'platform'
+      ? 'Definidas pelo grupo · a Farmarcas vê e não altera · lidas pelo módulo Escala'
+      : 'Edite em Editar dados básicos · lidas pelo módulo Escala';
 
   return (
-    <div className="flex flex-col gap-4 px-5 py-5">
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1 basis-60">
-          <h2 className="text-base font-semibold">Estratégias da loja</h2>
-          <p className="text-xs text-muted-foreground">
-            {page.side === 'tenant'
-              ? 'Marque o que orienta esta loja. A Farmarcas vê as estratégias do grupo.'
-              : 'Definidas pelo grupo. A Farmarcas acompanha e não altera.'}
-          </p>
-        </div>
-        {canEdit && draft !== null && (
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setDraft(null)}>
-              Cancelar
-            </Button>
-            <Button disabled={!hasChanges || isPending} onClick={save}>
-              Salvar
-            </Button>
-          </div>
-        )}
-      </div>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
+    <SectionCard title="Estratégias comerciais" description={description} bodyClassName="p-0">
+      <ul aria-label="Estratégias comerciais">
         {catalog.byKind('STRATEGY').map((item) => {
           const isOn = selected.includes(item.id);
           const since = page.strategies.find((strategy) => strategy.itemId === item.id)?.since;
+          const { text, usage } = splitDescription(item.description);
           return (
-            <label
-              key={item.id}
-              className={cn(
-                'flex items-start gap-3 rounded-md p-4',
-                isOn
-                  ? 'border-2 border-primary bg-primary-tint p-[15px]'
-                  : 'border border-border bg-surface',
-                canEdit ? 'cursor-pointer' : 'cursor-default',
-              )}
-            >
-              {canEdit ? (
-                <input
-                  type="checkbox"
-                  checked={isOn}
-                  onChange={() => toggle(item.id)}
-                  className="mt-0.5 accent-primary"
-                />
-              ) : (
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    'mt-0.5 flex size-4 items-center justify-center rounded-sm border',
-                    isOn ? 'border-primary bg-primary text-primary-foreground' : 'border-control',
-                  )}
-                >
-                  {isOn && <Check className="size-3" />}
-                </span>
-              )}
-              <span>
-                <span className="block text-sm font-semibold">{item.name}</span>
-                <span className="block text-xs text-muted-foreground">{item.description}</span>
-                {isOn && since && (
-                  <span className="mt-1 block text-xs font-semibold text-secondary-foreground">
-                    desde {formatDate(since)}
+            <li key={item.id} className="border-b border-subtle last:border-b-0">
+              <label
+                className={cn(
+                  'flex flex-wrap items-center gap-3 px-5 py-[13px] text-[13px]',
+                  canToggle ? 'cursor-pointer hover:bg-background' : 'cursor-default',
+                )}
+              >
+                {canToggle ? (
+                  <input
+                    type="checkbox"
+                    checked={isOn}
+                    onChange={() => editor.toggleStrategy(item.id)}
+                    className="size-[18px] shrink-0 accent-[var(--color-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  />
+                ) : (
+                  <span
+                    role="img"
+                    aria-label={isOn ? 'Ativa' : 'Não ativa'}
+                    className={cn(
+                      'flex size-[18px] shrink-0 items-center justify-center rounded-sm border',
+                      isOn
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'border-control bg-surface',
+                    )}
+                  >
+                    {isOn && <Check aria-hidden="true" strokeWidth={3} className="size-3" />}
                   </span>
                 )}
-              </span>
-            </label>
+                <span className="min-w-[200px] flex-1">
+                  <span
+                    className={cn(
+                      'block font-semibold',
+                      isOn ? 'text-foreground' : 'text-muted-foreground',
+                    )}
+                  >
+                    {item.name}
+                  </span>
+                  {text && <span className="block text-xs text-muted-foreground">{text}</span>}
+                </span>
+                {isOn && since && (
+                  <span className="text-xs text-muted-foreground">desde {formatDate(since)}</span>
+                )}
+                {isOn && usage && (
+                  <span className="rounded-full bg-info-soft px-2 py-0.5 text-[11px] font-bold text-info-text">
+                    {usage}
+                  </span>
+                )}
+              </label>
+            </li>
           );
         })}
-      </div>
-      {error && <InlineAlert>{error.message}</InlineAlert>}
-    </div>
+      </ul>
+    </SectionCard>
   );
 }
