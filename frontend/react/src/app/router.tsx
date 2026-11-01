@@ -1,4 +1,5 @@
 import { createBrowserRouter } from 'react-router-dom';
+import { listOf } from '@/features/settings';
 import { formatGroupNumber, formatStoreCode } from '@/lib/format';
 import { BrandsPage } from './BrandsPage';
 import { EmployeeDetailPage } from './EmployeeDetailPage';
@@ -11,6 +12,8 @@ import { OverviewPage } from './OverviewPage';
 import { PartnerDetailPage } from './PartnerDetailPage';
 import { PartnersPage } from './PartnersPage';
 import { RootLayout, type RouteHandle } from './RootLayout';
+import { SettingsCatalogPage } from './SettingsCatalogPage';
+import { SettingsPage } from './SettingsPage';
 import { StorePage } from './StorePage';
 import { StoresPage } from './StoresPage';
 import { TenantLayout } from './tenant/TenantLayout';
@@ -78,6 +81,19 @@ export const router = createBrowserRouter([
         path: '/parceiros/:id',
         element: <PartnerDetailPage />,
         handle: handle(() => [{ label: 'Parceiros', to: '/parceiros' }, { label: 'Parceiro' }]),
+      },
+      {
+        path: '/configuracoes',
+        element: <SettingsPage />,
+        handle: handle(() => [{ label: 'Configurações' }]),
+      },
+      {
+        path: '/configuracoes/atributos/:lista',
+        element: <SettingsCatalogPage />,
+        handle: handle((params) => [
+          { label: 'Configurações', to: '/configuracoes' },
+          { label: listOf(params.lista)?.label ?? 'Lista' },
+        ]),
       },
       {
         path: '*',

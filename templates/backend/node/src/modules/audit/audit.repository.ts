@@ -22,14 +22,17 @@ export const recordAudit = async (tx: Tx, actor: AuditActor, entry: AuditEntry):
 
 const listAudit = async (
   tx: Tx,
-  where: { economicGroupId: string } | { entityType: AuditEntityType; entityId: string },
+  where:
+    | { economicGroupId: string }
+    | { entityType: AuditEntityType; entityId: string | { in: string[] } },
   page: number,
   pageSize: number,
 ): Promise<{ data: AuditEventView[]; total: number }> => {
   // Consultas em sequência: dentro de uma transação interativa há uma só conexão.
   const rows = await tx.auditEvent.findMany({
     where,
-    orderBy: { createdAt: 'desc' },
+    // Mesmo milissegundo: o id (UUIDv7) desempata na ordem em que foi gravado.
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     skip: (page - 1) * pageSize,
     take: pageSize,
   });
@@ -66,3 +69,13 @@ export const listAuditByEntity = (
   pageSize: number,
 ): Promise<{ data: AuditEventView[]; total: number }> =>
   listAudit(tx, { entityType, entityId }, page, pageSize);
+
+// Histórico de vários registros juntos (ex.: todos os itens de uma lista de Configurações).
+export const listAuditByEntities = (
+  tx: Tx,
+  entityType: AuditEntityType,
+  entityIds: string[],
+  page: number,
+  pageSize: number,
+): Promise<{ data: AuditEventView[]; total: number }> =>
+  listAudit(tx, { entityType, entityId: { in: entityIds } }, page, pageSize);

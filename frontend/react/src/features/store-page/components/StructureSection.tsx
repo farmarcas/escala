@@ -32,9 +32,10 @@ export function StructureSection({ page, editor, catalog }: StructureSectionProp
   const hours = (isEditing && editor.hours) || page.hours;
   const selections: Selections = (isEditing && editor.selections) || page.selections;
   const [openPrograms, setOpenPrograms] = useState<string[]>([]);
-  const services = catalog.byKind('SERVICE');
-  const tools = catalog.byKind('PRACTICE_TOOL');
-  const pbms = catalog.byKind('PBM');
+  // Desativados em Configurações aparecem só onde a loja já tinha marcado (page, não o rascunho).
+  const services = catalog.byKind('SERVICE', page.selections.services);
+  const tools = catalog.byKind('PRACTICE_TOOL', page.selections.practiceTools);
+  const pbms = catalog.byKind('PBM', page.selections.pbms);
   const programs = [...new Set(pbms.map((item) => item.groupLabel ?? 'Outros'))];
 
   const numberField = (
@@ -100,6 +101,7 @@ export function StructureSection({ page, editor, catalog }: StructureSectionProp
               label={item.name}
               checked={selections.services.includes(item.id)}
               isEditing={isEditing}
+              isInactive={!item.active}
               onToggle={() => editor.toggleSelection('services', item.id)}
             />
           ))}
@@ -120,7 +122,7 @@ export function StructureSection({ page, editor, catalog }: StructureSectionProp
               aria-label="Sistema de demanda"
               className="mt-2.5 flex flex-wrap gap-1.5"
             >
-              {catalog.byKind('DEMAND_SYSTEM').map((item) => {
+              {catalog.byKind('DEMAND_SYSTEM', [page.structure.demandSystemId]).map((item) => {
                 const isOn = structure.demandSystemId === item.id;
                 return (
                   <button
@@ -128,10 +130,12 @@ export function StructureSection({ page, editor, catalog }: StructureSectionProp
                     type="button"
                     role="radio"
                     aria-checked={isOn}
+                    disabled={!item.active && !isOn}
                     onClick={() => editor.setStructure({ demandSystemId: isOn ? null : item.id })}
-                    className={pillClass(isOn)}
+                    className={cn(pillClass(isOn), 'disabled:opacity-50')}
                   >
                     {item.name}
+                    {!item.active && ' · desativado'}
                   </button>
                 );
               })}
@@ -150,6 +154,7 @@ export function StructureSection({ page, editor, catalog }: StructureSectionProp
                 label={item.name}
                 checked={selections.practiceTools.includes(item.id)}
                 isEditing={isEditing}
+                isInactive={!item.active}
                 onToggle={() => editor.toggleSelection('practiceTools', item.id)}
               />
             ))}
@@ -204,6 +209,7 @@ export function StructureSection({ page, editor, catalog }: StructureSectionProp
                         label={item.name}
                         checked={selections.pbms.includes(item.id)}
                         isEditing={isEditing}
+                        isInactive={!item.active}
                         onToggle={() => editor.toggleSelection('pbms', item.id)}
                       />
                     ))}

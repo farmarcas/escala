@@ -10,6 +10,7 @@ import { formatBrl, parseBrlToCents } from '@/lib/format';
 import type { Catalog } from '../hooks/useCatalog';
 import type { useStorePage } from '../hooks/useStorePage';
 import type { StorePage } from '../types';
+import { InactiveTag } from './CheckItem';
 import { UsesToggle, usesText, usesTone } from './UsesToggle';
 
 type Line = {
@@ -17,6 +18,7 @@ type Line = {
   itemId?: string;
   customId?: string;
   name: string;
+  isInactive?: boolean;
   category: string;
   negotiatedCents: number | null;
   negotiatedNote: string | null;
@@ -44,19 +46,25 @@ export function SystemsTab({ page, catalog, actions }: SystemsTabProps) {
   const declare = useMutation();
 
   const lines: Line[] = [
-    ...catalog.byKind('EXTERNAL_TOOL').map((item) => {
-      const answer = page.tools.find((tool) => tool.itemId === item.id);
-      return {
-        key: item.id,
-        itemId: item.id,
-        name: item.name,
-        category: item.groupLabel ?? 'Categoria a definir',
-        negotiatedCents: item.negotiatedMonthlyCents,
-        negotiatedNote: item.description,
-        uses: answer ? answer.uses : null,
-        costCents: answer?.monthlyCostCents ?? null,
-      };
-    }),
+    ...catalog
+      .byKind(
+        'EXTERNAL_TOOL',
+        page.tools.filter((tool) => tool.uses).map((tool) => tool.itemId),
+      )
+      .map((item) => {
+        const answer = page.tools.find((tool) => tool.itemId === item.id);
+        return {
+          key: item.id,
+          itemId: item.id,
+          name: item.name,
+          isInactive: !item.active,
+          category: item.groupLabel ?? 'Categoria a definir',
+          negotiatedCents: item.negotiatedMonthlyCents,
+          negotiatedNote: item.description,
+          uses: answer ? answer.uses : null,
+          costCents: answer?.monthlyCostCents ?? null,
+        };
+      }),
     ...page.customEntries
       .filter((entry) => entry.kind === 'EXTERNAL_TOOL')
       .map((entry) => ({
@@ -210,6 +218,7 @@ function ToolRow({
       <Cell>
         <p className="flex flex-wrap items-center gap-2 font-semibold">
           {line.name}
+          {line.isInactive && <InactiveTag />}
           {line.negotiatedCents !== null && (
             <StatusBadge tone="brand" size="sm" title={line.negotiatedNote ?? undefined}>
               Negociação Farmarcas

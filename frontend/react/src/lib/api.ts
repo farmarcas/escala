@@ -137,8 +137,11 @@ export function toApiError(error: unknown): ApiError {
 // Mensagem do campo vinda da validação da API (path "body.cnpj" → "cnpj").
 export function fieldErrors(error: ApiError | null): Record<string, string> {
   if (!error) return {};
+  // Detalhes que não são de campo (ex.: { existing } de nome repetido) ficam de fora.
   return Object.fromEntries(
-    error.details.map((issue) => [issue.path.replace(/^body\./, ''), issue.message]),
+    error.details
+      .filter((issue) => typeof issue.path === 'string')
+      .map((issue) => [issue.path.replace(/^body\./, ''), issue.message]),
   );
 }
 

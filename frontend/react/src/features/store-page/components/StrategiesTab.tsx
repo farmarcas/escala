@@ -4,6 +4,7 @@ import { formatDate } from '@/lib/format';
 import type { BasicEditor } from '../hooks/useBasicEditor';
 import type { Catalog } from '../hooks/useCatalog';
 import type { StorePage } from '../types';
+import { InactiveTag } from './CheckItem';
 import { EditBar } from './EditBar';
 import { SectionCard } from './SectionCard';
 import { FreeSectionCards, StructureSection } from './StructureSection';
@@ -31,15 +32,6 @@ export function StrategiesTab({ page, editor, catalog, onSave }: StrategiesTabPr
   );
 }
 
-// "Abrir mais horas ou dias · usada no módulo Escala": o que vem depois do "·" vira etiqueta.
-function splitDescription(description: string | null) {
-  const [text, usage] = (description ?? '').split(' · ');
-  return {
-    text: text || null,
-    usage: usage ? usage.charAt(0).toUpperCase() + usage.slice(1) : null,
-  };
-}
-
 // Estratégias comerciais: o grupo define; a Farmarcas vê e não altera (M1 RN-C17).
 function CommercialStrategies({
   page,
@@ -51,7 +43,8 @@ function CommercialStrategies({
   catalog: Catalog;
 }) {
   const canToggle = editor.isEditing && page.permissions.canEditStrategies;
-  const selected = (canToggle && editor.strategies) || page.strategies.map((item) => item.itemId);
+  const current = page.strategies.map((item) => item.itemId);
+  const selected = (canToggle && editor.strategies) || current;
   const description = canToggle
     ? 'Marque ou desmarque e salve'
     : page.side === 'platform'
@@ -61,10 +54,11 @@ function CommercialStrategies({
   return (
     <SectionCard title="Estratégias comerciais" description={description} bodyClassName="p-0">
       <ul aria-label="Estratégias comerciais">
-        {catalog.byKind('STRATEGY').map((item) => {
+        {catalog.byKind('STRATEGY', current).map((item) => {
           const isOn = selected.includes(item.id);
           const since = page.strategies.find((strategy) => strategy.itemId === item.id)?.since;
-          const { text, usage } = splitDescription(item.description);
+          // Desativada em Configurações: fica para quem já tinha, pode sair, não volta.
+          const isLocked = !item.active && !isOn;
           return (
             <li key={item.id} className="border-b border-subtle last:border-b-0">
               <label
@@ -73,7 +67,7 @@ function CommercialStrategies({
                   canToggle ? 'cursor-pointer hover:bg-background' : 'cursor-default',
                 )}
               >
-                {canToggle ? (
+                {canToggle && !isLocked ? (
                   <input
                     type="checkbox"
                     checked={isOn}
@@ -102,15 +96,22 @@ function CommercialStrategies({
                     )}
                   >
                     {item.name}
+                    {!item.active && (
+                      <span className="ml-2 align-middle">
+                        <InactiveTag />
+                      </span>
+                    )}
                   </span>
-                  {text && <span className="block text-xs text-muted-foreground">{text}</span>}
+                  {item.description && (
+                    <span className="block text-xs text-muted-foreground">{item.description}</span>
+                  )}
                 </span>
                 {isOn && since && (
                   <span className="text-xs text-muted-foreground">desde {formatDate(since)}</span>
                 )}
-                {isOn && usage && (
+                {isOn && item.usedByScale && (
                   <span className="rounded-full bg-info-soft px-2 py-0.5 text-[11px] font-bold text-info-text">
-                    {usage}
+                    Usada no módulo Escala
                   </span>
                 )}
               </label>

@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useDemoRole } from '@/features/demo-role';
 import { cn } from '@/lib/cn';
 
 type MobileLink = { to: string; label: string; end?: boolean };
@@ -13,13 +14,21 @@ const PLATFORM_LINKS: MobileLink[] = [
   { to: '/parceiros', label: 'Parceiros' },
 ];
 
+const ADMIN_LINKS: MobileLink[] = [{ to: '/configuracoes', label: 'Configurações' }];
+
 const TENANT_LINKS: MobileLink[] = [{ to: '/grupo/lojas', label: 'Minhas lojas' }];
 
 type MobileNavProps = { variant?: 'platform' | 'tenant' };
 
 // Em telas estreitas o menu lateral vira uma faixa de abas sob o topo.
 export function MobileNav({ variant = 'platform' }: MobileNavProps) {
-  const links = variant === 'tenant' ? TENANT_LINKS : PLATFORM_LINKS;
+  const { isAdmin } = useDemoRole();
+  const links =
+    variant === 'tenant'
+      ? TENANT_LINKS
+      : isAdmin
+        ? [...PLATFORM_LINKS, ...ADMIN_LINKS]
+        : PLATFORM_LINKS;
   return (
     <nav
       aria-label="Menu principal"

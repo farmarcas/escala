@@ -1,4 +1,4 @@
-export type AuditEntityType = 'GROUP' | 'EMPLOYEE' | 'PARTNER';
+export type AuditEntityType = 'GROUP' | 'EMPLOYEE' | 'PARTNER' | 'CATALOG_ITEM';
 
 export type AuditEntry = {
   economicGroupId: string | null;

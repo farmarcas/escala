@@ -12,6 +12,7 @@ import {
 } from '../store-page.repository.js';
 import type { StorePermissions } from '../permissions.js';
 import { WEEKDAYS, summarizeHours, type OpeningHour } from './hours.js';
+import { canAnswerInactive, inactiveItem, newlyAddedInactive } from './inactive-rule.js';
 import type { StructureEdit } from './structure.schemas.js';
 
 type Actor = Pick<HistoryEntry, 'actorKind' | 'actorSubject' | 'actorRole'>;
@@ -60,14 +61,18 @@ const listText = (ids: string[], names: Map<string, string>) =>
         .sort((a, b) => a.localeCompare(b, 'pt-BR'))
         .join(', ');
 
-const ensureKind = async (tx: Tx, ids: string[], kind: string) => {
+// Itens da lista certa e não excluídos; desativado só se a loja já tinha (inactive-rule).
+const ensureKind = async (tx: Tx, ids: string[], kind: string, current: string[] = []) => {
   if (ids.length === 0) return;
-  const found = await tx.catalogItem.count({
-    where: { id: { in: ids }, kind: kind as 'SERVICE', active: true },
+  const found = await tx.catalogItem.findMany({
+    where: { id: { in: ids }, kind: kind as 'SERVICE', deletedAt: null },
+    select: { id: true, active: true },
   });
-  if (found !== new Set(ids).size) {
+  if (found.length !== new Set(ids).size) {
     throw new AppError('Item de catálogo inválido para este campo', 400, 'CATALOG_ITEM_INVALID');
   }
+  const activeIds = new Set(found.filter((item) => item.active).map((item) => item.id));
+  if (newlyAddedInactive(current, ids, activeIds).length > 0) throw inactiveItem();
 };
 
 const catalogNames = async (tx: Tx) =>
@@ -103,7 +108,12 @@ export const applyStructureEdit = async (
 
   if (edit.structure) {
     if (edit.structure.demandSystemId)
-      await ensureKind(tx, [edit.structure.demandSystemId], 'DEMAND_SYSTEM');
+      await ensureKind(
+        tx,
+        [edit.structure.demandSystemId],
+        'DEMAND_SYSTEM',
+        store.demandSystemId ? [store.demandSystemId] : [],
+      );
     for (const [key, label] of Object.entries(STRUCTURE_LABELS)) {
       const next = edit.structure[key as keyof typeof STRUCTURE_LABELS];
       if (next === undefined) continue;
@@ -145,8 +155,8 @@ export const applyStructureEdit = async (
     for (const [key, { kind, label }] of Object.entries(SELECTION_KINDS)) {
       const next = edit.selections[key as keyof typeof SELECTION_KINDS];
       if (!next) continue;
-      await ensureKind(tx, next, kind);
       const current = entriesOfKind(store, kind).map((entry) => entry.catalogItemId);
+      await ensureKind(tx, next, kind, current);
       const toAdd = next.filter((id) => !current.includes(id));
       const toRemove = current.filter((id) => !next.includes(id));
       if (toAdd.length === 0 && toRemove.length === 0) continue;
@@ -242,8 +252,9 @@ export const furnitureText = (quantity: number, trade: number) =>
 export const structureService = {
   catalog(identity: Identity, kind?: string) {
     return withActor(identity, async (tx) => ({
+      // Desativados também vêm: a tela mostra os que a loja já usa (specs/004, FR-031).
       data: await tx.catalogItem.findMany({
-        where: { active: true, ...(kind ? { kind: kind as 'SERVICE' } : {}) },
+        where: { deletedAt: null, ...(kind ? { kind: kind as 'SERVICE' } : {}) },
         select: {
           id: true,
           kind: true,
@@ -251,6 +262,10 @@ export const structureService = {
           groupLabel: true,
           description: true,
           negotiatedMonthlyCents: true,
+          icon: true,
+          selfService: true,
+          usedByScale: true,
+          active: true,
         },
         orderBy: [{ kind: 'asc' }, { sort: 'asc' }],
       }),
@@ -268,8 +283,8 @@ export const structureService = {
     if (!permissions.canEditStrategies)
       throw new ForbiddenError('O grupo define as estratégias; a Farmarcas vê');
     const unique = [...new Set(itemIds)];
-    await ensureKind(tx, unique, 'STRATEGY');
     const current = entriesOfKind(store, 'STRATEGY').map((entry) => entry.catalogItemId);
+    await ensureKind(tx, unique, 'STRATEGY', current);
     const toAdd = unique.filter((id) => !current.includes(id));
     const toRemove = current.filter((id) => !unique.includes(id));
     if (toAdd.length === 0 && toRemove.length === 0) return false;
@@ -315,13 +330,15 @@ export const structureService = {
       throw new AppError('Trade não pode passar do total na loja', 400, 'TRADE_EXCEEDS_TOTAL');
     }
     const item = await tx.catalogItem.findFirst({
-      where: { id: itemId, kind: 'FURNITURE', active: true },
+      where: { id: itemId, kind: 'FURNITURE', deletedAt: null },
     });
     if (!item)
       throw new NotFoundError('Item de mobiliário não encontrado', 'CATALOG_ITEM_NOT_FOUND');
     const current = entriesOfKind(store, 'FURNITURE').find(
       (entry) => entry.catalogItemId === itemId,
     );
+    if (!item.active && !canAnswerInactive((current?.quantity ?? 0) > 0, quantity > 0))
+      throw inactiveItem();
     const before = current
       ? furnitureText(current.quantity ?? 0, current.tradeQuantity ?? 0)
       : null;

@@ -7,6 +7,7 @@ import { useMutation } from '@/hooks/useMutation';
 import type { Catalog } from '../hooks/useCatalog';
 import type { useStorePage } from '../hooks/useStorePage';
 import type { StorePage } from '../types';
+import { InactiveTag } from './CheckItem';
 import { UsesToggle, usesText, usesTone } from './UsesToggle';
 
 type Line = {
@@ -14,6 +15,7 @@ type Line = {
   itemId?: string;
   customId?: string;
   name: string;
+  isInactive?: boolean;
   fieldLabel: string;
   uses: boolean | null;
   identifier: string | null;
@@ -35,7 +37,10 @@ export function ChannelsTab({ page, catalog, actions }: ChannelsTabProps) {
   const canEdit = page.permissions.canEditChannels;
   const linesOf = (group: string): Line[] => [
     ...catalog
-      .byKind('CHANNEL')
+      .byKind(
+        'CHANNEL',
+        page.channels.filter((channel) => channel.uses).map((channel) => channel.itemId),
+      )
       .filter((item) => item.groupLabel === group)
       .map((item) => {
         const answer = page.channels.find((channel) => channel.itemId === item.id);
@@ -43,6 +48,7 @@ export function ChannelsTab({ page, catalog, actions }: ChannelsTabProps) {
           key: item.id,
           itemId: item.id,
           name: item.name,
+          isInactive: !item.active,
           fieldLabel: item.description ?? 'Identificação',
           uses: answer ? answer.uses : null,
           identifier: answer?.identifier ?? null,
@@ -154,6 +160,11 @@ function ChannelRow({
       <div className="min-w-0 flex-1 basis-56">
         <p className="text-sm font-semibold">
           {line.name}
+          {line.isInactive && (
+            <span className="ml-2">
+              <InactiveTag />
+            </span>
+          )}
           {line.customId && (
             <span className="ml-2 text-xs font-normal text-muted-foreground">
               Incluído pelo grupo

@@ -200,6 +200,7 @@ enum AuditEntity {
   GROUP
   EMPLOYEE
   PARTNER
+  CATALOG_ITEM
 
   @@map("audit_entity")
 }
@@ -458,22 +459,32 @@ model StoreHistory {
   @@map("store_history")
 }
 
-// Catálogos da Farmarcas (serviços, sistemas, PBMs, estratégias, mobiliário, ferramentas, canais).
-// Dado de plataforma: sem tenant e sem RLS. Valores de negociação em centavos.
+// Catálogos da Farmarcas (serviços, sistemas, PBMs, estratégias, mobiliário, ferramentas, canais),
+// mantidos em Configurações (specs/004). Dado de plataforma, sem tenant: o RLS libera a leitura
+// para todos e a gravação só para a plataforma. Valores de negociação em centavos.
+// Nome único por lista entre os não excluídos: índice parcial escrito à mão na migration.
 model CatalogItem {
   id                     String              @id @default(uuid(7)) @db.Uuid
   kind                   CatalogKind
   name                   String
+  // Agrupador por lista: tipo do mobiliário, operadora do PBM, categoria da ferramenta, prop/terc.
   groupLabel             String?             @map("group_label")
   description            String?
   negotiatedMonthlyCents Int?                @map("negotiated_monthly_cents")
   sort                   Int                 @default(0)
   active                 Boolean             @default(true)
+  // Chave da galeria de ícones (só mobiliário).
+  icon                   String?
+  selfService            Boolean             @default(false) @map("self_service")
+  usedByScale            Boolean             @default(false) @map("used_by_scale")
+  version                Int                 @default(1)
   createdAt              DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt              DateTime?           @map("deleted_at") @db.Timestamptz(3)
   entries                StoreCatalogEntry[]
   demandSystemStores     Store[]             @relation("StoreDemandSystem")
 
-  @@unique([kind, name])
+  @@index([kind, sort])
   @@map("catalog_items")
 }
 

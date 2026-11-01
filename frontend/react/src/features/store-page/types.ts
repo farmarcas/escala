@@ -88,6 +88,11 @@ export type CatalogItem = {
   groupLabel: string | null;
   description: string | null;
   negotiatedMonthlyCents: number | null;
+  icon: string | null;
+  selfService: boolean;
+  usedByScale: boolean;
+  // Desativado em Configurações: só aparece na loja que já usa (specs/004).
+  active: boolean;
 };
 
 export type StorePage = {

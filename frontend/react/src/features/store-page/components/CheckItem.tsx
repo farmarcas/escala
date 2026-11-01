@@ -6,9 +6,23 @@ type CheckItemProps = {
   checked: boolean;
   isEditing: boolean;
   disabled?: boolean;
+  // Item desativado em Configurações: a loja pode desmarcar, mas não marcar de novo.
+  isInactive?: boolean;
   onToggle?: () => void;
   className?: string;
 };
+
+// Marca do item desativado em Configurações (specs/004, FR-031).
+export function InactiveTag() {
+  return (
+    <span
+      title="A Farmarcas desativou este item: fica só nas lojas que já usam"
+      className="whitespace-nowrap rounded-full bg-subtle px-1.5 py-px text-[10px] font-bold text-secondary-foreground"
+    >
+      desativado
+    </span>
+  );
+}
 
 // Caixinha do protótipo "Loja Detalhe": em edição marca; em leitura mostra o marcado em cinza.
 export function CheckItem({
@@ -16,10 +30,11 @@ export function CheckItem({
   checked,
   isEditing,
   disabled = false,
+  isInactive = false,
   onToggle,
   className,
 }: CheckItemProps) {
-  const canToggle = isEditing && !disabled;
+  const canToggle = isEditing && !disabled && !(isInactive && !checked);
   return (
     <label
       className={cn(
@@ -46,13 +61,14 @@ export function CheckItem({
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-muted-foreground bg-muted-foreground text-surface'
               : 'border-control bg-surface',
-            isEditing && disabled && 'opacity-50',
+            isEditing && !canToggle && 'opacity-50',
           )}
         >
           {checked && <Check aria-hidden="true" strokeWidth={3} className="size-3" />}
         </span>
       )}
       <span className={cn(checked ? 'text-foreground' : 'text-muted-foreground')}>{label}</span>
+      {isInactive && <InactiveTag />}
     </label>
   );
 }

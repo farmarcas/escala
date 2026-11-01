@@ -8,6 +8,7 @@ import {
   type HistoryEntry,
   type StoreRow,
 } from '../store-page.repository.js';
+import { canAnswerInactive, inactiveItem } from './inactive-rule.js';
 import { channelText, toolText } from './tools.js';
 
 type Actor = Pick<HistoryEntry, 'actorKind' | 'actorSubject' | 'actorRole'>;
@@ -37,9 +38,17 @@ const history = (
   ...actor,
 });
 
-const catalogItem = async (tx: Tx, id: string, kind: 'EXTERNAL_TOOL' | 'CHANNEL') => {
-  const item = await tx.catalogItem.findFirst({ where: { id, kind, active: true } });
+// Item desativado só muda na loja que já usa, ou para deixar de usar (inactive-rule).
+const catalogItem = async (
+  tx: Tx,
+  id: string,
+  kind: 'EXTERNAL_TOOL' | 'CHANNEL',
+  alreadyUses: boolean,
+  nextUses: boolean,
+) => {
+  const item = await tx.catalogItem.findFirst({ where: { id, kind, deletedAt: null } });
   if (!item) throw new NotFoundError('Item de catálogo não encontrado', 'CATALOG_ITEM_NOT_FOUND');
+  if (!item.active && !canAnswerInactive(alreadyUses, nextUses)) throw inactiveItem();
   return item;
 };
 
@@ -54,10 +63,10 @@ export const toolsChannelsService = {
     monthlyCostCents: number | null,
   ) {
     requireTenantWrite(permissions, permissions.canEditTools);
-    const item = await catalogItem(tx, itemId, 'EXTERNAL_TOOL');
     const current = entriesOfKind(store, 'EXTERNAL_TOOL').find(
       (entry) => entry.catalogItemId === itemId,
     );
+    const item = await catalogItem(tx, itemId, 'EXTERNAL_TOOL', current?.uses === true, uses);
     const cost = uses ? (monthlyCostCents ?? 0) : null;
     const before = toolText(current ? current.uses : null, current?.monthlyCostCents ?? null);
     const after = toolText(uses, cost);
@@ -84,8 +93,8 @@ export const toolsChannelsService = {
     identifier: string | null,
   ) {
     requireTenantWrite(permissions, permissions.canEditChannels);
-    const item = await catalogItem(tx, itemId, 'CHANNEL');
     const current = entriesOfKind(store, 'CHANNEL').find((entry) => entry.catalogItemId === itemId);
+    const item = await catalogItem(tx, itemId, 'CHANNEL', current?.uses === true, uses);
     const value = uses ? identifier?.trim() || null : null;
     const before = channelText(current ? current.uses : null, current?.identifier ?? null);
     const after = channelText(uses, value);

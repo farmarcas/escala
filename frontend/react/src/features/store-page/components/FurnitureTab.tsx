@@ -5,18 +5,10 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Cell, HeaderCell, Row, Table } from '@/components/ui/Table';
 import { useMutation } from '@/hooks/useMutation';
 import { formatNumber } from '@/lib/format';
+import { FURNITURE_TYPE_LABEL, furnitureIcon } from '@/lib/furniture-icons';
 import type { Catalog } from '../hooks/useCatalog';
 import type { CatalogItem, StorePage } from '../types';
-
-const TYPE_LABEL: Record<string, string> = {
-  gondola: 'Gôndola',
-  checkout: 'Check-out',
-  balcao: 'Balcão',
-  frio: 'Refrigeração',
-  expositor: 'Expositor',
-  sala: 'Sala',
-  outro: 'Outro',
-};
+import { InactiveTag } from './CheckItem';
 
 type FurnitureTabProps = {
   page: StorePage;
@@ -26,13 +18,17 @@ type FurnitureTabProps = {
 
 // Mobiliário: total de cada item na loja e quanto fica disponível para ações de Trade (US7).
 export function FurnitureTab({ page, catalog, onSave }: FurnitureTabProps) {
-  const items = catalog.byKind('FURNITURE');
+  // Desativado em Configurações só aparece se a loja tem algum (specs/004, FR-031).
+  const items = catalog.byKind(
+    'FURNITURE',
+    page.furniture.filter((item) => item.quantity > 0).map((item) => item.itemId),
+  );
   const valueOf = (id: string) =>
     page.furniture.find((item) => item.itemId === id) ?? { quantity: 0, tradeQuantity: 0 };
   const total = page.furniture.reduce((sum, item) => sum + item.quantity, 0);
   const trade = page.furniture.reduce((sum, item) => sum + item.tradeQuantity, 0);
   const selfService = items
-    .filter((item) => item.groupLabel === 'gondola' || item.groupLabel === 'expositor')
+    .filter((item) => item.selfService)
     .reduce((sum, item) => sum + valueOf(item.id).quantity, 0);
 
   return (
@@ -111,18 +107,30 @@ function FurnitureRow({ item, value, canEdit, onSave }: FurnitureRowProps) {
     if (await run(() => onSave(item.id, quantity, trade))) setDraft(null);
   };
 
+  const { icon: Icon } = furnitureIcon(item.icon);
+
   return (
     <Row isDimmed={value.quantity === 0 && !draft}>
       <Cell>
-        <p className="font-semibold">{item.name}</p>
-        <p className="text-xs text-muted-foreground">{item.description}</p>
-        {(issue || error) && (
-          <p className="mt-1 text-xs text-destructive-text">{issue ?? error?.message}</p>
-        )}
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary">
+            <Icon aria-hidden="true" className="size-[18px]" />
+          </span>
+          <div className="min-w-0">
+            <p className="flex flex-wrap items-center gap-2 font-semibold">
+              {item.name}
+              {!item.active && <InactiveTag />}
+            </p>
+            <p className="text-xs text-muted-foreground">{item.description}</p>
+            {(issue || error) && (
+              <p className="mt-1 text-xs text-destructive-text">{issue ?? error?.message}</p>
+            )}
+          </div>
+        </div>
       </Cell>
       <Cell>
         <StatusBadge tone="neutral" size="sm">
-          {TYPE_LABEL[item.groupLabel ?? 'outro'] ?? 'Outro'}
+          {FURNITURE_TYPE_LABEL[item.groupLabel ?? 'outro'] ?? 'Outro'}
         </StatusBadge>
       </Cell>
       <Cell isNumeric>

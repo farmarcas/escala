@@ -8,11 +8,13 @@ import {
   Handshake,
   LayoutGrid,
   LogOut,
+  Settings,
   Store,
   Tag,
   Users,
   type LucideIcon,
 } from 'lucide-react';
+import { useDemoRole } from '@/features/demo-role';
 import { cn } from '@/lib/cn';
 
 type NavItem = {
@@ -36,6 +38,9 @@ const NAV: NavItem[] = [
   { to: '/parceiros', label: 'Parceiros', icon: Handshake },
 ];
 
+// Configurações: só o administrador da plataforma (specs/004, FR-001).
+const ADMIN_NAV: NavItem[] = [{ to: '/configuracoes', label: 'Configurações', icon: Settings }];
+
 const UPCOMING: Pick<NavItem, 'label' | 'icon'>[] = [];
 
 // Módulos do operador Farmarcas. Gestão 360 entra depois (protótipo "Gestão 360").
@@ -54,7 +59,8 @@ type MenuRailProps = {
 export function MenuRail({ isCollapsed, variant, title, subtitle }: MenuRailProps) {
   const isTenant = variant === 'tenant';
   const [isModulesOpen, setIsModulesOpen] = useState(false);
-  const nav = isTenant ? TENANT_NAV : NAV;
+  const { isAdmin } = useDemoRole();
+  const nav = isTenant ? TENANT_NAV : isAdmin ? [...NAV, ...ADMIN_NAV] : NAV;
   const upcoming = isTenant ? [] : UPCOMING;
   // No menu escuro do grupo, texto claro; no Backoffice, rail claro.
   const tone = isTenant
