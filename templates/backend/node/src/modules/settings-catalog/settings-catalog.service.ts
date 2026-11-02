@@ -23,7 +23,7 @@ import {
 
 export type CatalogItemView = Omit<ItemRow, 'kind' | 'sort'> & {
   position: number;
-  storesInUse: number;
+  inUse: number;
 };
 
 type Status = 'active' | 'inactive' | 'all';
@@ -44,7 +44,7 @@ const toView = (rows: ItemRow[], inUse: Map<string, number>): CatalogItemView[] 
   rows.map(({ kind: _kind, sort: _sort, ...row }, index) => ({
     ...row,
     position: index + 1,
-    storesInUse: inUse.get(row.id) ?? 0,
+    inUse: inUse.get(row.id) ?? 0,
   }));
 
 const matches = (row: ItemRow, status: Status, q: string | undefined) => {
@@ -75,7 +75,7 @@ const ensureUniqueName = (rows: ItemRow[], name: string, exceptId?: string) => {
 
 const loadView = async (tx: Tx, slug: CatalogSlug, id: string): Promise<CatalogItemView> => {
   const rows = await repo.items(tx, listOfSlug(slug).kind);
-  const view = toView(rows, await repo.storesInUse(tx, [id])).find((item) => item.id === id);
+  const view = toView(rows, await repo.inUse(tx, [id])).find((item) => item.id === id);
   if (!view) throw notFound();
   return view;
 };
@@ -115,6 +115,7 @@ export const settingsCatalogService = {
         data: CATALOG_LISTS.map((list) => ({
           kind: list.slug,
           label: list.label,
+          section: list.section,
           active: count(list.kind, true),
           inactive: count(list.kind, false),
         })),
@@ -125,7 +126,7 @@ export const settingsCatalogService = {
   list(identity: PlatformIdentity, slug: CatalogSlug, status: Status, q?: string) {
     return withActor(identity, async (tx) => {
       const rows = await repo.items(tx, listOfSlug(slug).kind);
-      const inUse = await repo.storesInUse(
+      const inUse = await repo.inUse(
         tx,
         rows.map((row) => row.id),
       );
@@ -229,7 +230,7 @@ export const settingsCatalogService = {
       return {
         data: toView(
           fresh,
-          await repo.storesInUse(
+          await repo.inUse(
             tx,
             fresh.map((row) => row.id),
           ),
@@ -269,13 +270,21 @@ export const settingsCatalogService = {
     const list = listOfSlug(slug);
     return withActor(identity, async (tx) => {
       const item = await requireItem(tx, slug, id, version);
-      const stores = (await repo.storesInUse(tx, [id])).get(id) ?? 0;
-      if (stores > 0) {
+      const users = (await repo.inUse(tx, [id])).get(id) ?? 0;
+      if (users > 0) {
+        const unit =
+          list.section === 'people'
+            ? users === 1
+              ? 'pessoa'
+              : 'pessoas'
+            : users === 1
+              ? 'loja'
+              : 'lojas';
         throw new AppError(
-          `Em uso por ${stores} ${stores === 1 ? 'loja' : 'lojas'}. Desative em vez de excluir.`,
+          `Em uso por ${users} ${unit}. Desative em vez de excluir.`,
           409,
           'IN_USE',
-          [{ stores }],
+          [{ inUse: users }],
         );
       }
       if (!(await repo.updateVersioned(tx, id, version, { deletedAt: new Date() })))

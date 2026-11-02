@@ -4,6 +4,7 @@ import { sendCsv, toCsv } from '../../shared/http/csv.js';
 import { readPlatformIdentity } from '../../shared/identity/authenticate.js';
 import { readValidated } from '../../shared/middlewares/validate.js';
 import type {
+  employeeAccessRequest,
   employeeFacetsRequest,
   createEmployeeRequest,
   employeeAuditRequest,
@@ -13,9 +14,9 @@ import type {
   updateEmployeeRequest,
 } from './employees.schemas.js';
 import { EMPLOYEE_CSV_COLUMNS } from './employees.csv.js';
-import type { EmployeesService } from './employees.service.js';
+import { employeesService as service } from './employees.service.js';
 
-export const makeEmployeesController = (service: EmployeesService) => ({
+export const employeesController = {
   async list(req: Request, res: Response) {
     const { query } = readValidated<z.infer<typeof listEmployeesRequest>>(res);
     const { page, pageSize, ...filter } = query;
@@ -59,10 +60,21 @@ export const makeEmployeesController = (service: EmployeesService) => ({
     res.json(await service.changeStatus(readPlatformIdentity(req), params.id, body));
   },
 
+  async options(req: Request, res: Response) {
+    res.json(await service.options(readPlatformIdentity(req)));
+  },
+
+  async setAccess(req: Request, res: Response) {
+    const { params, body } = readValidated<z.infer<typeof employeeAccessRequest>>(res);
+    res.json(
+      await service.setAccess(readPlatformIdentity(req), params.id, params.system, body.role),
+    );
+  },
+
   async listAudit(req: Request, res: Response) {
     const { params, query } = readValidated<z.infer<typeof employeeAuditRequest>>(res);
     res.json(
       await service.listAudit(readPlatformIdentity(req), params.id, query.page, query.pageSize),
     );
   },
-});
+};

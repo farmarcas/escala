@@ -6,39 +6,43 @@ import {
   searchQuery,
   uuidParam,
 } from '../../shared/http/request-schemas.js';
-import { listOf } from '../../shared/http/list-filters.js';
-
-// Áreas da Farmarcas: a mesma lista do Gestão 360 (spec 003, FR-011).
-export const employeeAreaSchema = z.enum([
-  'COMMERCIAL',
-  'MEMBER_FINANCE',
-  'TRADE',
-  'DIGITAL_PRODUCTS',
-  'MEMBER_SUCCESS',
-  'OPERATIONS',
-]);
-export type EmployeeAreaValue = z.infer<typeof employeeAreaSchema>;
-
-export const employeeAccessRoleSchema = z.enum(['PLATFORM_ADMIN', 'PLATFORM_ANALYST', 'NONE']);
-export type EmployeeAccessRoleValue = z.infer<typeof employeeAccessRoleSchema>;
+import { listOf, uuidListOf } from '../../shared/http/list-filters.js';
 
 export const employeeStatusSchema = z.enum(['ACTIVE', 'TERMINATED']);
 export type EmployeeStatusValue = z.infer<typeof employeeStatusSchema>;
 
-// Telefone opcional: vazio vira "sem telefone".
-const phoneSchema = z
+export const genderSchema = z.enum(['FEMALE', 'MALE', 'OTHER', 'UNDISCLOSED']);
+export const suiteSystemSchema = z.enum(['BACKOFFICE', 'GESTAO_360', 'ESCALA']);
+export const suiteRoleSchema = z.enum(['ADMIN', 'MANAGER', 'ANALYST']);
+
+// Filtro "Sistema e papel": BACKOFFICE:ADMIN, ... ou NONE (sem nenhum acesso).
+export const NO_ACCESS = 'NONE';
+export const ACCESS_VALUES = [
+  ...suiteSystemSchema.options.flatMap((system) =>
+    suiteRoleSchema.options.map((role) => `${system}:${role}` as const),
+  ),
+  NO_ACCESS,
+] as const;
+
+// Celular obrigatório (11 dígitos) e fixo opcional (10 dígitos), sempre com DDD (spec 005, FR-002).
+const mobileSchema = z
   .string()
   .transform(onlyDigits)
-  .pipe(z.string().regex(/^(\d{10,11})?$/, 'Telefone deve ter DDD e 8 ou 9 dígitos'))
+  .pipe(z.string().regex(/^\d{11}$/, 'Celular deve ter DDD e 9 dígitos'));
+const landlineSchema = z
+  .string()
+  .transform(onlyDigits)
+  .pipe(z.string().regex(/^(\d{10})?$/, 'Telefone fixo deve ter DDD e 8 dígitos'))
   .transform((value) => value || null);
 
 const employeeFields = {
-  name: z.string().trim().min(3).max(120),
+  name: z.string().trim().min(3, 'Informe o nome completo').max(120),
   email: z.string().trim().toLowerCase().email('E-mail inválido'),
-  phone: phoneSchema.nullable().optional(),
-  area: employeeAreaSchema,
-  jobTitle: z.string().trim().min(2).max(80),
-  accessRole: employeeAccessRoleSchema,
+  gender: genderSchema.nullable().optional(),
+  mobile: mobileSchema,
+  landline: landlineSchema.nullable().optional(),
+  departmentId: z.string().uuid('Escolha o departamento'),
+  occupationId: z.string().uuid('Escolha a ocupação'),
 };
 
 export const createEmployeeSchema = z.object(employeeFields).strict();
@@ -46,17 +50,16 @@ export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>;
 
 export const updateEmployeeSchema = z
   .object({
+    version: z.number().int().positive(),
     name: employeeFields.name.optional(),
     email: employeeFields.email.optional(),
-    phone: employeeFields.phone,
-    area: employeeFields.area.optional(),
-    jobTitle: employeeFields.jobTitle.optional(),
-    accessRole: employeeFields.accessRole.optional(),
+    gender: employeeFields.gender,
+    mobile: employeeFields.mobile.optional(),
+    landline: employeeFields.landline,
+    departmentId: employeeFields.departmentId.optional(),
+    occupationId: employeeFields.occupationId.optional(),
   })
-  .strict()
-  .refine((input) => Object.values(input).some((value) => value !== undefined), {
-    message: 'Informe ao menos um campo',
-  });
+  .strict();
 export type UpdateEmployeeInput = z.infer<typeof updateEmployeeSchema>;
 
 export const employeeStatusChangeSchema = z
@@ -72,8 +75,8 @@ export const listEmployeesQuery = z
     ...paginationShape,
     search: searchQuery,
     // "+ Filtro": cada campo aceita vários valores separados por vírgula.
-    area: listOf(employeeAreaSchema.options),
-    accessRole: listOf(employeeAccessRoleSchema.options),
+    department: uuidListOf(),
+    access: listOf(ACCESS_VALUES),
     status: listOf(employeeStatusSchema.options),
   })
   .strict();
@@ -81,12 +84,13 @@ export type ListEmployeesQuery = z.infer<typeof listEmployeesQuery>;
 export type EmployeeFilter = Omit<ListEmployeesQuery, 'page' | 'pageSize'>;
 
 export const listEmployeesRequest = requestSchema({ query: listEmployeesQuery });
-export const EMPLOYEE_FACET_FIELDS = ['area', 'accessRole', 'status'] as const;
+export const EMPLOYEE_FACET_FIELDS = ['department', 'access', 'status'] as const;
 export type EmployeeFacetField = (typeof EMPLOYEE_FACET_FIELDS)[number];
 export const employeeFacetsRequest = requestSchema({
   query: listEmployeesQuery.extend({ field: z.enum(EMPLOYEE_FACET_FIELDS) }),
 });
 export const employeeStatsRequest = requestSchema({});
+export const employeeOptionsRequest = requestSchema({});
 export const getEmployeeRequest = requestSchema({ params: uuidParam });
 export const createEmployeeRequest = requestSchema({ body: createEmployeeSchema });
 export const updateEmployeeRequest = requestSchema({
@@ -96,6 +100,10 @@ export const updateEmployeeRequest = requestSchema({
 export const employeeStatusRequest = requestSchema({
   body: employeeStatusChangeSchema,
   params: uuidParam,
+});
+export const employeeAccessRequest = requestSchema({
+  params: z.object({ id: z.string().uuid(), system: suiteSystemSchema }).strict(),
+  body: z.object({ role: suiteRoleSchema.nullable() }).strict(),
 });
 export const employeeAuditRequest = requestSchema({
   params: uuidParam,

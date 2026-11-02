@@ -2,9 +2,9 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Cell, HeaderCell, Row, Table } from '@/components/ui/Table';
-import { formatBrl, formatNumber } from '@/lib/format';
+import { formatBrl } from '@/lib/format';
 import { furnitureIcon } from '@/lib/furniture-icons';
-import { groupLabelText, type CatalogListConfig } from '../catalogKinds';
+import { groupLabelText, inUseText, type CatalogListConfig } from '../catalogKinds';
 import type { SettingsCatalogItem } from '../types';
 
 type CatalogItemsTableProps = {
@@ -119,9 +119,7 @@ export function CatalogItemsTable({
                 </Cell>
               )}
               <Cell isNumeric className="whitespace-nowrap text-[13px]">
-                {item.storesInUse === 0
-                  ? 'Nenhuma loja'
-                  : `${formatNumber(item.storesInUse)} ${item.storesInUse === 1 ? 'loja' : 'lojas'}`}
+                {inUseText(list, item.inUse)}
               </Cell>
               <Cell>
                 <StatusBadge tone={item.active ? 'success' : 'neutral'} size="sm">

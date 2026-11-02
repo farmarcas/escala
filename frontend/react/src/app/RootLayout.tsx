@@ -9,7 +9,7 @@ export type { RouteHandle } from './useCrumbs';
 // Backoffice Farmarcas. O papel "Proprietário do grupo" é levado para a área do grupo.
 export function RootLayout() {
   const crumbs = useCrumbs();
-  const { isAdmin, isOwner } = useDemoRole();
+  const { canOperate, isOwner } = useDemoRole();
   if (isOwner) return <Navigate to="/grupo/lojas" replace />;
 
   return (
@@ -17,7 +17,7 @@ export function RootLayout() {
       railTitle="Farmarcas"
       railSubtitle="Operador"
       crumbs={crumbs}
-      isReadOnly={!isAdmin}
+      isReadOnly={!canOperate}
       account={<RoleSwitcher />}
       mobileNav={<MobileNav />}
     >

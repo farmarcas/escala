@@ -12,6 +12,7 @@ import { STORE_ALERTS, type StoreFilter, type StoreStatusValue } from './stores.
 import type { PlatformIdentity } from '../../shared/identity/identity.js';
 import type { AuditEntry } from '../audit/audit.types.js';
 import type { StoreHistoryChange, StoreRecord, StoresRepository } from './stores.service.js';
+import { ANGEL_SELECT, toAngelView } from '../employees/angel-view.js';
 
 // Loja em operação sem mudança de cadastro nem validação há mais deste prazo (spec 003, R9).
 const OUTDATED_DAYS = 90;
@@ -58,7 +59,7 @@ const storeSelect = () =>
       select: {
         number: true,
         name: true,
-        angel: { select: { id: true, name: true, jobTitle: true, email: true, phone: true } },
+        angel: { select: ANGEL_SELECT },
       },
     },
     _count: {
@@ -91,7 +92,7 @@ const toRecord = (row: StoreRow): StoreRecord => ({
   code: row.code,
   groupNumber: row.economicGroup.number,
   groupName: row.economicGroup.name,
-  angel: row.economicGroup.angel,
+  angel: row.economicGroup.angel ? toAngelView(row.economicGroup.angel) : null,
   brand: row.brand,
   name: row.name,
   legalName: row.legalName,

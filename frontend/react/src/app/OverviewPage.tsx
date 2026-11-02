@@ -3,10 +3,10 @@ import { useDemoRole } from '@/features/demo-role';
 import { OverviewView } from '@/features/overview';
 
 export function OverviewPage() {
-  const { isAdmin } = useDemoRole();
+  const { canOperate } = useDemoRole();
   return (
     <PageBody>
-      <OverviewView canCreateTenant={isAdmin} />
+      <OverviewView canCreateTenant={canOperate} />
     </PageBody>
   );
 }

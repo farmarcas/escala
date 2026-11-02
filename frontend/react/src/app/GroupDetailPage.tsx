@@ -8,7 +8,7 @@ import { NotFoundPage } from './NotFoundPage';
 
 export function GroupDetailPage() {
   const { numero } = useParams();
-  const { isAdmin } = useDemoRole();
+  const { canOperate } = useDemoRole();
   const number = Number(numero);
   if (!Number.isInteger(number) || number <= 0) return <NotFoundPage />;
 
@@ -17,7 +17,7 @@ export function GroupDetailPage() {
       <GroupDetailView
         key={number}
         number={number}
-        canEdit={isAdmin}
+        canEdit={canOperate}
         renderStores={({ group, canEdit, onChanged, isAddingStore, setIsAddingStore }) => (
           <GroupStoresPanel
             group={{

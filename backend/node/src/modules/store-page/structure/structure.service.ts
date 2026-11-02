@@ -12,6 +12,7 @@ import {
 } from '../store-page.repository.js';
 import type { StorePermissions } from '../permissions.js';
 import { WEEKDAYS, summarizeHours, type OpeningHour } from './hours.js';
+import { STORE_KINDS } from '../../settings-catalog/catalog-kinds.js';
 import { canAnswerInactive, inactiveItem, newlyAddedInactive } from './inactive-rule.js';
 import type { StructureEdit } from './structure.schemas.js';
 
@@ -254,7 +255,7 @@ export const structureService = {
     return withActor(identity, async (tx) => ({
       // Desativados também vêm: a tela mostra os que a loja já usa (specs/004, FR-031).
       data: await tx.catalogItem.findMany({
-        where: { deletedAt: null, ...(kind ? { kind: kind as 'SERVICE' } : {}) },
+        where: { deletedAt: null, kind: kind ? (kind as 'SERVICE') : { in: STORE_KINDS } },
         select: {
           id: true,
           kind: true,

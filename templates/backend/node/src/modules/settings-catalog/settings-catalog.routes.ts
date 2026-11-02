@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requirePlatformRole } from '../../shared/identity/authenticate.js';
+import { adminOnly } from '../../shared/identity/authenticate.js';
 import { validate } from '../../shared/middlewares/validate.js';
 import { settingsCatalogController as c } from './settings-catalog.controller.js';
 import {
@@ -16,7 +16,7 @@ import {
 // Configurações → Atributos da loja (specs/004). Só o administrador, inclusive para ler (FR-002).
 export const settingsCatalogRouter = () => {
   const router = Router();
-  router.use(requirePlatformRole('PLATFORM_ADMIN'));
+  router.use(adminOnly);
 
   router.get('/', validate(summaryRequest), c.summary);
   router.get('/:kind', validate(listItemsRequest), c.list);

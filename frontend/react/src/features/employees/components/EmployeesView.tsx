@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/Button';
@@ -12,7 +12,8 @@ import { useFilterControls } from '@/hooks/useFilterControls';
 import { api } from '@/lib/api';
 import { formatNumber } from '@/lib/format';
 import { useEmployeesList } from '../hooks/useEmployeesList';
-import { EMPLOYEE_FILTER, EMPLOYEE_SHORTCUTS } from '../filterFields';
+import { EMPLOYEE_SHORTCUTS, employeeFilter } from '../filterFields';
+import { useEmployeeOptions } from '../hooks/useEmployeeDetail';
 import type { EmployeeDetail, EmployeeInput } from '../types';
 import { EmployeeFormModal } from './EmployeeFormModal';
 import { EmployeesKpis } from './EmployeesKpis';
@@ -24,7 +25,13 @@ type EmployeesViewProps = { canEdit: boolean };
 export function EmployeesView({ canEdit }: EmployeesViewProps) {
   const navigate = useNavigate();
   const list = useEmployeesList();
-  const controls = useFilterControls(EMPLOYEE_FILTER, list.filters, {
+  const { options } = useEmployeeOptions();
+  const filterConfig = useMemo(
+    () =>
+      employeeFilter((id) => options?.departments.find((department) => department.id === id)?.name),
+    [options],
+  );
+  const controls = useFilterControls(filterConfig, list.filters, {
     search: list.debouncedSearch,
   });
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -51,7 +58,7 @@ export function EmployeesView({ canEdit }: EmployeesViewProps) {
 
       <Card as="section" className="overflow-hidden">
         <FilterToolbar
-          searchLabel="Buscar por nome, e-mail ou cargo"
+          searchLabel="Buscar por nome, e-mail ou ocupação"
           search={list.search}
           onSearch={list.setSearch}
           menu={controls.menu}

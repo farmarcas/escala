@@ -1,31 +1,82 @@
 -- Dados de exemplo FICTÍCIOS: funcionários da Farmarcas e o Anjo de cada grupo (spec 003, US1/US2).
--- Só local/dev. Depende da migration backoffice_fase2_p1 e dos grupos dos seeds anteriores.
+-- Só local/dev. Depende das migrations backoffice_fase2_p1 e funcionario_acessos e dos grupos dos seeds anteriores.
 -- Idempotente: IDs fixos (md5 do e-mail, ajustado para UUID válido) + ON CONFLICT DO NOTHING; o Anjo só é definido onde o
 -- grupo ainda não tem um, para não desfazer o que foi escolhido na tela.
 BEGIN;
 
-INSERT INTO farmarcas_employees (id, name, email, phone, area, job_title, access_role, status, terminated_at, created_at, updated_at)
-SELECT overlay(overlay(md5('seed-func-' || e.email) placing '5' from 13 for 1) placing '8' from 17 for 1)::uuid, e.name, e.email, e.phone, e.area::employee_area, e.job_title,
-       e.access_role::employee_access_role, e.status::employee_status,
+-- Departamentos (criados pela migration 20261102120100) e ocupações de exemplo. A busca é pelo
+-- nome: num banco que já existia, a migration criou os mesmos itens com outros ids.
+INSERT INTO catalog_items (id, kind, name, sort)
+SELECT gen_random_uuid(), o.kind::catalog_kind, o.name, o.sort
+  FROM (VALUES
+    ('DEPARTMENT', 'Comercial', 0),
+    ('DEPARTMENT', 'Financeiro do associado', 1),
+    ('DEPARTMENT', 'Trade', 2),
+    ('DEPARTMENT', 'Produtos digitais', 3),
+    ('DEPARTMENT', 'Sucesso do associado', 4),
+    ('DEPARTMENT', 'Operações', 5),
+    ('OCCUPATION', 'Analista de relacionamento', 0),
+    ('OCCUPATION', 'Analista de trade marketing', 1),
+    ('OCCUPATION', 'Analista financeiro', 2),
+    ('OCCUPATION', 'Coordenador de operações', 3),
+    ('OCCUPATION', 'Coordenadora comercial', 4),
+    ('OCCUPATION', 'Gerente de produtos digitais', 5),
+    ('OCCUPATION', 'Gerente de sucesso do associado', 6),
+    ('OCCUPATION', 'Supervisora de relacionamento', 7)
+  ) AS o(kind, name, sort)
+ WHERE NOT EXISTS (
+   SELECT 1 FROM catalog_items c
+    WHERE c.kind = o.kind::catalog_kind AND lower(c.name) = lower(o.name) AND c.deleted_at IS NULL
+ );
+
+INSERT INTO farmarcas_employees (id, name, email, gender, mobile, landline, department_id, occupation_id, status, terminated_at, created_at, updated_at)
+SELECT overlay(overlay(md5('seed-func-' || e.email) placing '5' from 13 for 1) placing '8' from 17 for 1)::uuid, e.name, e.email,
+       e.gender::employee_gender, e.mobile, e.landline, d.id, o.id, e.status::employee_status,
        CASE WHEN e.status = 'TERMINATED' THEN timestamptz '2026-08-29 18:00:00-03' END,
        timestamptz '2024-02-01 09:00:00-03', timestamptz '2024-02-01 09:00:00-03'
   FROM (VALUES
-    ('Juliana Prado',   'juliana.prado@farmarcas.com.br',   '11900007781', 'MEMBER_SUCCESS',   'Analista de relacionamento',      'PLATFORM_ANALYST', 'ACTIVE'),
-    ('Isabela Nunes',   'isabela.nunes@farmarcas.com.br',   '41900003320', 'MEMBER_SUCCESS',   'Analista de relacionamento',      'PLATFORM_ANALYST', 'ACTIVE'),
-    ('Marília Duarte',  'marilia.duarte@farmarcas.com.br',  '31900004415', 'MEMBER_SUCCESS',   'Analista de relacionamento',      'PLATFORM_ANALYST', 'ACTIVE'),
-    ('Rafael Quintana', 'rafael.quintana@farmarcas.com.br', '11900006692', 'MEMBER_SUCCESS',   'Analista de relacionamento',      'PLATFORM_ANALYST', 'ACTIVE'),
-    ('Débora Lins',     'debora.lins@farmarcas.com.br',     '81900002204', 'MEMBER_SUCCESS',   'Analista de relacionamento',      'PLATFORM_ANALYST', 'ACTIVE'),
-    ('Tiago Moreira',   'tiago.moreira@farmarcas.com.br',   '51900008817', 'MEMBER_SUCCESS',   'Analista de relacionamento',      'PLATFORM_ANALYST', 'ACTIVE'),
-    ('Renata Alves',    'renata.alves@farmarcas.com.br',    '11900001150', 'MEMBER_SUCCESS',   'Supervisora de relacionamento',   'PLATFORM_ANALYST', 'ACTIVE'),
-    ('Bruno Castro',    'bruno.castro@farmarcas.com.br',    '11900009934', 'MEMBER_SUCCESS',   'Gerente de sucesso do associado', 'PLATFORM_ADMIN',   'ACTIVE'),
-    ('Luana Ferraz',    'luana.ferraz@farmarcas.com.br',    NULL,          'COMMERCIAL',       'Coordenadora comercial',          'PLATFORM_ANALYST', 'ACTIVE'),
-    ('Paulo Sardinha',  'paulo.sardinha@farmarcas.com.br',  NULL,          'MEMBER_FINANCE',   'Analista financeiro',             'NONE',             'ACTIVE'),
-    ('Camila Rezende',  'camila.rezende@farmarcas.com.br',  NULL,          'TRADE',            'Analista de trade marketing',     'NONE',             'ACTIVE'),
-    ('Gustavo Pires',   'gustavo.pires@farmarcas.com.br',   '11900005508', 'DIGITAL_PRODUCTS', 'Gerente de produtos digitais',    'PLATFORM_ADMIN',   'ACTIVE'),
-    ('Sérgio Matos',    'sergio.matos@farmarcas.com.br',    NULL,          'OPERATIONS',       'Coordenador de operações',        'PLATFORM_ANALYST', 'ACTIVE'),
-    ('Helena Vidal',    'helena.vidal@farmarcas.com.br',    NULL,          'MEMBER_SUCCESS',   'Analista de relacionamento',      'PLATFORM_ANALYST', 'TERMINATED')
-  ) AS e(name, email, phone, area, job_title, access_role, status)
+    ('Juliana Prado',   'juliana.prado@farmarcas.com.br',   'FEMALE', '11900007781', NULL,         'Sucesso do associado',    'Analista de relacionamento',      'ACTIVE'),
+    ('Isabela Nunes',   'isabela.nunes@farmarcas.com.br',   'FEMALE', '41900003320', NULL,         'Sucesso do associado',    'Analista de relacionamento',      'ACTIVE'),
+    ('Marília Duarte',  'marilia.duarte@farmarcas.com.br',  'FEMALE', '31900004415', NULL,         'Sucesso do associado',    'Analista de relacionamento',      'ACTIVE'),
+    ('Rafael Quintana', 'rafael.quintana@farmarcas.com.br', 'MALE',   '11900006692', NULL,         'Sucesso do associado',    'Analista de relacionamento',      'ACTIVE'),
+    ('Débora Lins',     'debora.lins@farmarcas.com.br',     'FEMALE', '81900002204', NULL,         'Sucesso do associado',    'Analista de relacionamento',      'ACTIVE'),
+    ('Tiago Moreira',   'tiago.moreira@farmarcas.com.br',   'MALE',   '51900008817', NULL,         'Sucesso do associado',    'Analista de relacionamento',      'ACTIVE'),
+    ('Renata Alves',    'renata.alves@farmarcas.com.br',    'FEMALE', '11900001150', '1130450000', 'Sucesso do associado',    'Supervisora de relacionamento',   'ACTIVE'),
+    ('Bruno Castro',    'bruno.castro@farmarcas.com.br',    'MALE',   '11900009934', '1130450001', 'Sucesso do associado',    'Gerente de sucesso do associado', 'ACTIVE'),
+    ('Luana Ferraz',    'luana.ferraz@farmarcas.com.br',    NULL,     NULL,          NULL,         'Comercial',               'Coordenadora comercial',          'ACTIVE'),
+    ('Paulo Sardinha',  'paulo.sardinha@farmarcas.com.br',  NULL,     NULL,          NULL,         'Financeiro do associado', 'Analista financeiro',             'ACTIVE'),
+    ('Camila Rezende',  'camila.rezende@farmarcas.com.br',  NULL,     NULL,          NULL,         'Trade',                   'Analista de trade marketing',     'ACTIVE'),
+    ('Gustavo Pires',   'gustavo.pires@farmarcas.com.br',   'MALE',   '11900005508', NULL,         'Produtos digitais',       'Gerente de produtos digitais',    'ACTIVE'),
+    ('Sérgio Matos',    'sergio.matos@farmarcas.com.br',    NULL,     NULL,          NULL,         'Operações',               'Coordenador de operações',        'ACTIVE'),
+    ('Helena Vidal',    'helena.vidal@farmarcas.com.br',    NULL,     NULL,          NULL,         'Sucesso do associado',    'Analista de relacionamento',      'TERMINATED')
+  ) AS e(name, email, gender, mobile, landline, department, occupation, status)
+  JOIN catalog_items d ON d.kind = 'DEPARTMENT' AND d.name = e.department AND d.deleted_at IS NULL
+  JOIN catalog_items o ON o.kind = 'OCCUPATION' AND o.name = e.occupation AND o.deleted_at IS NULL
 ON CONFLICT DO NOTHING;
+
+-- Acessos ao Backoffice (spec 005): só para quem ainda não tem nenhum acesso registrado, para não
+-- desfazer o que foi mudado na tela. Bruno e Gustavo administram; Renata é gestora.
+INSERT INTO employee_system_accesses (id, employee_id, system, role, granted_at, granted_by)
+SELECT gen_random_uuid(), e.id, a.system::suite_system, a.role::suite_role, e.created_at, 'OP-02'
+  FROM (VALUES
+    ('bruno.castro@farmarcas.com.br',    'BACKOFFICE', 'ADMIN'),
+    ('gustavo.pires@farmarcas.com.br',   'BACKOFFICE', 'ADMIN'),
+    ('gustavo.pires@farmarcas.com.br',   'GESTAO_360', 'ADMIN'),
+    ('renata.alves@farmarcas.com.br',    'BACKOFFICE', 'MANAGER'),
+    ('renata.alves@farmarcas.com.br',    'GESTAO_360', 'MANAGER'),
+    ('juliana.prado@farmarcas.com.br',   'BACKOFFICE', 'ANALYST'),
+    ('juliana.prado@farmarcas.com.br',   'GESTAO_360', 'ANALYST'),
+    ('isabela.nunes@farmarcas.com.br',   'BACKOFFICE', 'ANALYST'),
+    ('marilia.duarte@farmarcas.com.br',  'BACKOFFICE', 'ANALYST'),
+    ('rafael.quintana@farmarcas.com.br', 'BACKOFFICE', 'ANALYST'),
+    ('debora.lins@farmarcas.com.br',     'BACKOFFICE', 'ANALYST'),
+    ('tiago.moreira@farmarcas.com.br',   'BACKOFFICE', 'ANALYST'),
+    ('luana.ferraz@farmarcas.com.br',    'BACKOFFICE', 'ANALYST'),
+    ('sergio.matos@farmarcas.com.br',    'BACKOFFICE', 'ANALYST'),
+    ('sergio.matos@farmarcas.com.br',    'ESCALA',     'MANAGER')
+  ) AS a(email, system, role)
+  JOIN farmarcas_employees e ON e.email = a.email AND e.status = 'ACTIVE'
+ WHERE NOT EXISTS (SELECT 1 FROM employee_system_accesses x WHERE x.employee_id = e.id);
 
 INSERT INTO audit_events (id, economic_group_id, entity_type, entity_id, action, summary, actor_subject, actor_role, justification, created_at)
 SELECT overlay(overlay(md5('seed-func-audit-' || e.email) placing '5' from 13 for 1) placing '8' from 17 for 1)::uuid, NULL, 'EMPLOYEE', e.id, 'EMPLOYEE_CREATED',

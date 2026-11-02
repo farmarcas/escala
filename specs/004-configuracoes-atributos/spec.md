@@ -197,6 +197,10 @@ O administrador consulta quem incluiu, mudou, desativou ou excluiu cada item, e 
 - **SC-005**: Na galeria, o administrador encontra o ícone procurado com uma busca de uma palavra em pelo menos 9 de cada 10 tentativas dos testes de aceitação.
 - **SC-006**: 100% das mudanças nas listas aparecem no histórico com quem fez e quando.
 
+## Depois desta etapa
+
+A spec 005 acrescentou a seção **Pessoas da Farmarcas** (Departamentos e Ocupações), com o mesmo cadastro de listas. Isso respondeu à pergunta "criação de áreas para o sistema".
+
 ## Fora desta etapa
 
 Ficam para as próximas etapas do menu Configurações:

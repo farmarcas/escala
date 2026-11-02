@@ -126,8 +126,9 @@ export function CatalogListView({ list }: CatalogListViewProps) {
         )}
       </Card>
       <p className="text-xs text-muted-foreground">
-        A ordem desta lista é a mesma da página da loja. Mudanças valem na hora para todas as lojas
-        e entram no histórico.
+        {list.section === 'people'
+          ? 'Mudanças valem na hora para todos os perfis e entram no histórico.'
+          : 'A ordem desta lista é a mesma da página da loja. Mudanças valem na hora para todas as lojas e entram no histórico.'}
       </p>
 
       {editing && (
@@ -143,6 +144,7 @@ export function CatalogListView({ list }: CatalogListViewProps) {
       )}
       {deleting && (
         <DeleteItemModal
+          list={list}
           item={deleting}
           onClose={() => setDeleting(null)}
           onDelete={catalog.remove}

@@ -58,7 +58,7 @@ describe('Configurações · atributos da loja', () => {
       selfService: true,
       active: true,
       position: 2,
-      storesInUse: 0,
+      inUse: 0,
       version: 1,
     });
     expect(list.body.data.map((item: { name: string }) => item.name)).toEqual([
@@ -68,6 +68,7 @@ describe('Configurações · atributos da loja', () => {
     expect(summary.body.data).toContainEqual({
       kind: 'furniture',
       label: 'Mobiliário',
+      section: 'store',
       active: 2,
       inactive: 0,
     });
@@ -247,7 +248,7 @@ describe('Configurações · atributos da loja', () => {
     expect(lower.status).toBe(200);
     expect(raise.body.error.code).toBe('CATALOG_ITEM_INACTIVE');
     expect(blocked.status).toBe(409);
-    expect(blocked.body.error).toMatchObject({ code: 'IN_USE', details: [{ stores: 1 }] });
+    expect(blocked.body.error).toMatchObject({ code: 'IN_USE', details: [{ inUse: 1 }] });
     expect(catalog.body.data).toContainEqual(
       expect.objectContaining({ id: pbm.id, active: false }),
     );

@@ -31,9 +31,9 @@ export function EmployeesKpis({ stats }: EmployeesKpisProps) {
         isLoading={isLoading}
       />
       <KpiCard
-        label="Administradores da plataforma"
+        label="Administradores do Backoffice"
         value={formatNumber(stats?.admins ?? 0)}
-        context="Podem criar e alterar cadastros no Backoffice"
+        context="Cadastram funcionários, dão acessos e mexem em Configurações"
         isLoading={isLoading}
       />
     </KpiGrid>

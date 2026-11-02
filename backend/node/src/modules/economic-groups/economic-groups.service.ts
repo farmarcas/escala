@@ -5,7 +5,7 @@ import { generatePseudonym } from '../../shared/br/pseudonym.js';
 import { ConflictError } from '../../shared/errors/conflict-error.js';
 import { NotFoundError } from '../../shared/errors/not-found-error.js';
 import { splitBulk } from '../../shared/bulk.js';
-import { isPlatformAdmin, type PlatformIdentity } from '../../shared/identity/identity.js';
+import { isPlatformOperator, type PlatformIdentity } from '../../shared/identity/identity.js';
 import type { AuditEntry, AuditEventView } from '../audit/audit.types.js';
 import type {
   BenefitCardInput,
@@ -49,7 +49,7 @@ export type GroupSummaryRecord = {
   outdatedStores: number;
 };
 
-// Cartão Alelo do grupo: dados pessoais do titular só para o administrador.
+// Cartão Alelo do grupo: dados pessoais do titular só para administrador e gestor.
 export type BenefitCardRecord = {
   holderName: string;
   holderCpf: string;
@@ -87,7 +87,7 @@ export type GroupStats = {
 export type GroupSize = 'none' | 'one' | 'small' | 'medium' | 'large';
 
 export type GroupFilter = Omit<ListGroupsQuery, 'page' | 'pageSize'> & {
-  // Só o administrador busca pelo nome do proprietário; o analista não reidentifica pessoas.
+  // Administrador e gestor buscam pelo nome do proprietário; o analista não reidentifica pessoas.
   searchOwnerName: boolean;
 };
 
@@ -187,7 +187,7 @@ export const toOwnerView = (
   owner: OwnerRecord | null,
 ): OwnerView | null => {
   if (!owner) return null;
-  if (!isPlatformAdmin(actor)) return { pseudonym: owner.pseudonym };
+  if (!isPlatformOperator(actor)) return { pseudonym: owner.pseudonym };
   return { ...owner };
 };
 
@@ -203,11 +203,11 @@ export const toGroupSummaryView = (actor: PlatformIdentity, group: GroupSummaryR
   return { ...rest, owner: toOwnerView(actor, owner), badges: badgesOf(group) };
 };
 
-// O número do cartão nunca sai inteiro; CPF mascarado e nascimento só para o administrador.
+// O número do cartão nunca sai inteiro; CPF mascarado e nascimento só para administrador e gestor.
 export const toBenefitCardView = (actor: PlatformIdentity, card: BenefitCardRecord | null) => {
   if (!card) return null;
   const store = { code: card.store.code, name: card.store.name, status: card.store.status };
-  if (!isPlatformAdmin(actor)) return { holderPseudonym: card.holderPseudonym, store };
+  if (!isPlatformOperator(actor)) return { holderPseudonym: card.holderPseudonym, store };
   return {
     holderPseudonym: card.holderPseudonym,
     holderName: card.holderName,
@@ -303,7 +303,7 @@ export const makeEconomicGroupsService = (repo: EconomicGroupsRepository) => {
       const { page, pageSize, ...filter } = query;
       const { data, total } = await repo.list(
         actor,
-        { ...filter, searchOwnerName: isPlatformAdmin(actor) },
+        { ...filter, searchOwnerName: isPlatformOperator(actor) },
         page,
         pageSize,
       );
@@ -320,7 +320,7 @@ export const makeEconomicGroupsService = (repo: EconomicGroupsRepository) => {
     // Quantos grupos há em cada valor do campo, com os outros filtros aplicados.
     async facets(actor: PlatformIdentity, field: GroupFacetField, query: ListGroupsQuery) {
       const { page: _page, pageSize: _pageSize, ...filter } = query;
-      const base = { ...filter, searchOwnerName: isPlatformAdmin(actor) };
+      const base = { ...filter, searchOwnerName: isPlatformOperator(actor) };
       const data: FacetCount[] = [];
       for (const value of await repo.facetValues(actor, field)) {
         data.push({ value, count: await repo.count(actor, { ...base, [field]: [value] }) });
@@ -333,7 +333,7 @@ export const makeEconomicGroupsService = (repo: EconomicGroupsRepository) => {
       const { page: _page, pageSize: _pageSize, ...filter } = query;
       const { data, total } = await repo.list(
         actor,
-        { ...filter, searchOwnerName: isPlatformAdmin(actor) },
+        { ...filter, searchOwnerName: isPlatformOperator(actor) },
         1,
         EXPORT_LIMIT,
       );
@@ -344,7 +344,7 @@ export const makeEconomicGroupsService = (repo: EconomicGroupsRepository) => {
     async get(actor: PlatformIdentity, number: number) {
       const group = await requireGroup(actor, number);
       // Todo acesso do operador a dado pessoal fica na auditoria (Product Vision §9, invariante 5).
-      if (group.owner && isPlatformAdmin(actor)) {
+      if (group.owner && isPlatformOperator(actor)) {
         await repo.recordAuditOnce(
           actor,
           group.id,

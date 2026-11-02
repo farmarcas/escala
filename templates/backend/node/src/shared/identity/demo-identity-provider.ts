@@ -4,8 +4,9 @@ import type { IdentityProvider, PlatformIdentity, TenantIdentity } from './ident
 
 // Só para ambiente local (DEMO_IDENTITY_ENABLED=true). O env.ts impede o uso em produção.
 // Lê o cabeçalho x-demo-role; sem ele (ou com valor desconhecido) vale o papel mais restrito.
-const DEMO_IDENTITIES: Record<'admin' | 'analyst', PlatformIdentity> = {
+const DEMO_IDENTITIES: Record<'admin' | 'manager' | 'analyst', PlatformIdentity> = {
   admin: { kind: 'platform', subject: 'OP-02', role: 'PLATFORM_ADMIN' },
+  manager: { kind: 'platform', subject: 'OP-05', role: 'PLATFORM_MANAGER' },
   analyst: { kind: 'platform', subject: 'OP-07', role: 'PLATFORM_ANALYST' },
 };
 
@@ -30,7 +31,9 @@ const ownerIdentity = async (req: Request): Promise<TenantIdentity | null> => {
 export const demoIdentityProvider: IdentityProvider = (req) => {
   const role = req.header('x-demo-role');
   if (role === 'owner') return ownerIdentity(req);
-  return role === 'admin' ? DEMO_IDENTITIES.admin : DEMO_IDENTITIES.analyst;
+  if (role === 'admin') return DEMO_IDENTITIES.admin;
+  if (role === 'manager') return DEMO_IDENTITIES.manager;
+  return DEMO_IDENTITIES.analyst;
 };
 
 // Sem provedor configurado ninguém entra (falha fechada).

@@ -1,6 +1,8 @@
 import type { Request } from 'express';
 
-export type PlatformRole = 'PLATFORM_ADMIN' | 'PLATFORM_ANALYST';
+// Papéis no Backoffice (spec 005): administrador, gestor (opera, sem funcionários, acessos e
+// Configurações) e analista (só consulta).
+export type PlatformRole = 'PLATFORM_ADMIN' | 'PLATFORM_MANAGER' | 'PLATFORM_ANALYST';
 export type TenantRole = 'TENANT_ADMIN' | 'TENANT_USER';
 
 // Quem está agindo. Vem do provedor de identidade (Product Vision §6), nunca do corpo da requisição.
@@ -18,3 +20,8 @@ export type IdentityProvider = (req: Request) => Identity | null | Promise<Ident
 
 export const isPlatformAdmin = (identity: Identity): boolean =>
   identity.kind === 'platform' && identity.role === 'PLATFORM_ADMIN';
+
+// Administrador e gestor operam o Backoffice e veem os dados pessoais do proprietário.
+export const isPlatformOperator = (identity: Identity): boolean =>
+  identity.kind === 'platform' &&
+  (identity.role === 'PLATFORM_ADMIN' || identity.role === 'PLATFORM_MANAGER');

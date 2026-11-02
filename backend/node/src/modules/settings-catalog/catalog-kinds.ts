@@ -1,16 +1,39 @@
 import type { CatalogKind } from '../../generated/prisma/client.js';
 
-// As 8 listas de Configurações → Atributos da loja (specs/004). O endereço usa o slug.
+// Listas de Configurações. O endereço usa o slug. Seção "store": atributos da loja (spec 004);
+// seção "people": pessoas da Farmarcas (spec 005).
 export const CATALOG_LISTS = [
-  { slug: 'furniture', kind: 'FURNITURE', label: 'Mobiliário' },
-  { slug: 'services', kind: 'SERVICE', label: 'Serviços' },
-  { slug: 'demand-systems', kind: 'DEMAND_SYSTEM', label: 'Sistema utilizado' },
-  { slug: 'practice-tools', kind: 'PRACTICE_TOOL', label: 'Ferramentas de boas práticas' },
-  { slug: 'pbms', kind: 'PBM', label: 'PBMs' },
-  { slug: 'strategies', kind: 'STRATEGY', label: 'Estratégias comerciais' },
-  { slug: 'external-tools', kind: 'EXTERNAL_TOOL', label: 'Ferramentas externas' },
-  { slug: 'channels', kind: 'CHANNEL', label: 'Canais de venda' },
-] as const satisfies readonly { slug: string; kind: CatalogKind; label: string }[];
+  { slug: 'furniture', kind: 'FURNITURE', label: 'Mobiliário', section: 'store' },
+  { slug: 'services', kind: 'SERVICE', label: 'Serviços', section: 'store' },
+  { slug: 'demand-systems', kind: 'DEMAND_SYSTEM', label: 'Sistema utilizado', section: 'store' },
+  {
+    slug: 'practice-tools',
+    kind: 'PRACTICE_TOOL',
+    label: 'Ferramentas de boas práticas',
+    section: 'store',
+  },
+  { slug: 'pbms', kind: 'PBM', label: 'PBMs', section: 'store' },
+  { slug: 'strategies', kind: 'STRATEGY', label: 'Estratégias comerciais', section: 'store' },
+  {
+    slug: 'external-tools',
+    kind: 'EXTERNAL_TOOL',
+    label: 'Ferramentas externas',
+    section: 'store',
+  },
+  { slug: 'channels', kind: 'CHANNEL', label: 'Canais de venda', section: 'store' },
+  { slug: 'departments', kind: 'DEPARTMENT', label: 'Departamentos', section: 'people' },
+  { slug: 'occupations', kind: 'OCCUPATION', label: 'Ocupações', section: 'people' },
+] as const satisfies readonly {
+  slug: string;
+  kind: CatalogKind;
+  label: string;
+  section: 'store' | 'people';
+}[];
+
+// Tipos que a página da loja usa (os de pessoas ficam fora do catálogo da loja).
+export const STORE_KINDS = CATALOG_LISTS.filter((list) => list.section === 'store').map(
+  (list) => list.kind,
+);
 
 export type CatalogSlug = (typeof CATALOG_LISTS)[number]['slug'];
 export const CATALOG_SLUGS = CATALOG_LISTS.map((list) => list.slug) as [

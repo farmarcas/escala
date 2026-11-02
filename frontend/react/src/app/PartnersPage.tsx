@@ -3,10 +3,10 @@ import { useDemoRole } from '@/features/demo-role';
 import { PartnersView } from '@/features/partners';
 
 export function PartnersPage() {
-  const { isAdmin } = useDemoRole();
+  const { canOperate } = useDemoRole();
   return (
     <PageBody>
-      <PartnersView canEdit={isAdmin} />
+      <PartnersView canEdit={canOperate} />
     </PageBody>
   );
 }

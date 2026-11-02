@@ -46,6 +46,8 @@ const FIELDS = {
     groupLabel: z.enum(CHANNEL_TYPES, { message: 'Escolha próprio ou de terceiro' }),
     description: z.string().trim().min(1, 'Informe o que a loja preenche').max(200),
   },
+  departments: { name },
+  occupations: { name },
 } satisfies Record<CatalogSlug, z.ZodRawShape>;
 
 export type CatalogItemInput = {

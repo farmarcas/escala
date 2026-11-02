@@ -6,6 +6,7 @@ import { useAuditEvents } from '../hooks/useAuditEvents';
 
 const ROLE_LABEL: Record<string, string> = {
   PLATFORM_ADMIN: 'Administrador da plataforma',
+  PLATFORM_MANAGER: 'Gestor da plataforma',
   PLATFORM_ANALYST: 'Analista da plataforma',
   SYSTEM: 'Sistema',
 };

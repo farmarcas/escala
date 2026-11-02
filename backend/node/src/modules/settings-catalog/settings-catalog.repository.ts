@@ -58,14 +58,15 @@ export const settingsCatalogRepository = {
     });
   },
 
-  // Lojas (não excluídas) que usam cada item: resposta preenchida ou sistema utilizado.
+  // Quem usa cada item: lojas (não excluídas) com resposta preenchida ou sistema utilizado, nas
+  // listas da loja; funcionários (não excluídos), nas listas de pessoas (spec 005).
   // Mobiliário com quantidade 0 e ferramenta marcada como "não usa" não contam.
-  async storesInUse(tx: Tx, ids: string[]): Promise<Map<string, number>> {
+  async inUse(tx: Tx, ids: string[]): Promise<Map<string, number>> {
     if (ids.length === 0) return new Map();
-    const rows = await tx.$queryRaw<{ itemId: string; stores: number }[]>`
-      SELECT used.item_id AS "itemId", count(DISTINCT used.store_id)::int AS stores
+    const rows = await tx.$queryRaw<{ itemId: string; users: number }[]>`
+      SELECT used.item_id AS "itemId", count(DISTINCT used.user_id)::int AS users
       FROM (
-        SELECT e.catalog_item_id AS item_id, e.store_id
+        SELECT e.catalog_item_id AS item_id, e.store_id AS user_id
         FROM store_catalog_entries e
         JOIN stores s ON s.id = e.store_id AND s.deleted_at IS NULL
         WHERE (e.quantity IS NULL OR e.quantity > 0) AND e.uses IS DISTINCT FROM false
@@ -73,10 +74,14 @@ export const settingsCatalogRepository = {
         SELECT s.demand_system_id, s.id
         FROM stores s
         WHERE s.demand_system_id IS NOT NULL AND s.deleted_at IS NULL
+        UNION
+        SELECT f.department_id, f.id FROM farmarcas_employees f WHERE f.deleted_at IS NULL
+        UNION
+        SELECT f.occupation_id, f.id FROM farmarcas_employees f WHERE f.deleted_at IS NULL
       ) used
       WHERE used.item_id = ANY(${ids}::uuid[])
       GROUP BY used.item_id`;
-    return new Map(rows.map((row) => [row.itemId, row.stores]));
+    return new Map(rows.map((row) => [row.itemId, row.users]));
   },
 
   async nextSort(tx: Tx, kind: CatalogKind): Promise<number> {

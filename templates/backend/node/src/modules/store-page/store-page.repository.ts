@@ -3,6 +3,7 @@ import type { Tx } from '../../shared/database/with-actor.js';
 import { computeCompleteness } from './completeness.js';
 import { BASIC_FIELD_KEYS } from './fields.js';
 import { hasOpeningHours } from './structure/hours.js';
+import { ANGEL_SELECT } from '../employees/angel-view.js';
 
 // Acesso ao banco da página da loja. Funções recebem a transação aberta por withActor:
 // o RLS já limita ao que o ator pode ver (grupo vê só as próprias lojas).
@@ -30,7 +31,7 @@ export const storeInclude = {
         take: 1,
       },
       // O grupo lê o próprio Anjo pela política tenant_angel (spec 003, R1).
-      angel: { select: { name: true, jobTitle: true, email: true, phone: true } },
+      angel: { select: ANGEL_SELECT },
     },
   },
 } as const satisfies Prisma.StoreInclude;

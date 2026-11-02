@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requirePlatformRole } from '../../shared/identity/authenticate.js';
+import { operators } from '../../shared/identity/authenticate.js';
 import { validate } from '../../shared/middlewares/validate.js';
 import { createGroupStoreRequest, listGroupStoresRequest } from '../stores/stores.schemas.js';
 import { makeStoresControllerFor } from '../stores/stores.routes.js';
@@ -25,8 +25,6 @@ import {
   type EconomicGroupsRepository,
 } from './economic-groups.service.js';
 
-const adminOnly = requirePlatformRole('PLATFORM_ADMIN');
-
 export const economicGroupsRouter = (
   repo: EconomicGroupsRepository = economicGroupsRepository,
   storesRepo?: StoresRepository,
@@ -39,26 +37,26 @@ export const economicGroupsRouter = (
   router.get('/stats', validate(groupStatsRequest), controller.stats);
   router.get('/facets', validate(groupFacetsRequest), controller.facets);
   router.get('/export', validate(listGroupsRequest), controller.exportCsv);
-  router.post('/', adminOnly, validate(createGroupRequest), controller.create);
-  router.post('/bulk-angel', adminOnly, validate(bulkAngelRequest), controller.bulkAngel);
+  router.post('/', operators, validate(createGroupRequest), controller.create);
+  router.post('/bulk-angel', operators, validate(bulkAngelRequest), controller.bulkAngel);
   router.get('/:number', validate(getGroupRequest), controller.get);
-  router.patch('/:number', adminOnly, validate(updateGroupRequest), controller.update);
+  router.patch('/:number', operators, validate(updateGroupRequest), controller.update);
   router.post(
     '/:number/status-changes',
-    adminOnly,
+    operators,
     validate(statusChangeRequest),
     controller.changeStatus,
   );
-  router.put('/:number/angel', adminOnly, validate(setAngelRequest), controller.setAngel);
+  router.put('/:number/angel', operators, validate(setAngelRequest), controller.setAngel);
   router.post(
     '/:number/owner-transfer',
-    adminOnly,
+    operators,
     validate(ownerTransferRequest),
     controller.transferOwner,
   );
   router.put(
     '/:number/benefit-card',
-    adminOnly,
+    operators,
     validate(benefitCardRequest),
     controller.setBenefitCard,
   );
@@ -66,7 +64,7 @@ export const economicGroupsRouter = (
   router.get('/:number/stores', validate(listGroupStoresRequest), stores.listByGroup);
   router.post(
     '/:number/stores',
-    adminOnly,
+    operators,
     validate(createGroupStoreRequest),
     stores.createInGroup,
   );

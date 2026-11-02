@@ -119,6 +119,9 @@ enum CatalogKind {
   FURNITURE
   EXTERNAL_TOOL
   CHANNEL
+  // Listas de pessoas da Farmarcas (spec 005).
+  DEPARTMENT
+  OCCUPATION
 
   @@map("catalog_kind")
 }
@@ -147,23 +150,30 @@ enum StoreHistoryKind {
 }
 
 // Fase 2 do Backoffice (specs/003-backoffice-fase-2/data-model.md).
-enum EmployeeArea {
-  COMMERCIAL
-  MEMBER_FINANCE
-  TRADE
-  DIGITAL_PRODUCTS
-  MEMBER_SUCCESS
-  OPERATIONS
+// Spec 005: gênero do funcionário, sistemas da Suite e papel em cada sistema.
+enum EmployeeGender {
+  FEMALE
+  MALE
+  OTHER
+  UNDISCLOSED
 
-  @@map("employee_area")
+  @@map("employee_gender")
 }
 
-enum EmployeeAccessRole {
-  PLATFORM_ADMIN
-  PLATFORM_ANALYST
-  NONE
+enum SuiteSystem {
+  BACKOFFICE
+  GESTAO_360
+  ESCALA
 
-  @@map("employee_access_role")
+  @@map("suite_system")
+}
+
+enum SuiteRole {
+  ADMIN
+  MANAGER
+  ANALYST
+
+  @@map("suite_role")
 }
 
 enum EmployeeStatus {
@@ -483,6 +493,8 @@ model CatalogItem {
   deletedAt              DateTime?           @map("deleted_at") @db.Timestamptz(3)
   entries                StoreCatalogEntry[]
   demandSystemStores     Store[]             @relation("StoreDemandSystem")
+  departmentEmployees    FarmarcasEmployee[] @relation("EmployeeDepartment")
+  occupationEmployees    FarmarcasEmployee[] @relation("EmployeeOccupation")
 
   @@index([kind, sort])
   @@map("catalog_items")
@@ -574,21 +586,46 @@ model StoreCustomEntry {
 // Funcionário da Farmarcas (operador). Dado da plataforma, fora de qualquer tenant; o grupo
 // só lê o próprio Anjo (política tenant_angel no SQL da migration).
 model FarmarcasEmployee {
-  id           String             @id @default(uuid(7)) @db.Uuid
+  id           String                 @id @default(uuid(7)) @db.Uuid
   name         String
   email        String
-  phone        String?
-  area         EmployeeArea
-  jobTitle     String             @map("job_title")
-  accessRole   EmployeeAccessRole @map("access_role")
-  status       EmployeeStatus     @default(ACTIVE)
-  terminatedAt DateTime?          @map("terminated_at") @db.Timestamptz(3)
-  deletedAt    DateTime?          @map("deleted_at") @db.Timestamptz(3)
-  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  gender       EmployeeGender?
+  // Celular é obrigatório na API; fica nulo só em cadastro antigo sem telefone (spec 005).
+  mobile       String?                @db.Char(11)
+  landline     String?                @db.Char(10)
+  departmentId String                 @map("department_id") @db.Uuid
+  department   CatalogItem            @relation("EmployeeDepartment", fields: [departmentId], references: [id])
+  occupationId String                 @map("occupation_id") @db.Uuid
+  occupation   CatalogItem            @relation("EmployeeOccupation", fields: [occupationId], references: [id])
+  status       EmployeeStatus         @default(ACTIVE)
+  terminatedAt DateTime?              @map("terminated_at") @db.Timestamptz(3)
+  version      Int                    @default(1)
+  deletedAt    DateTime?              @map("deleted_at") @db.Timestamptz(3)
+  createdAt    DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
   angelOf      EconomicGroup[]
+  accesses     EmployeeSystemAccess[]
 
+  @@index([departmentId])
+  @@index([occupationId])
   @@map("farmarcas_employees")
+}
+
+// Acesso de um funcionário a um sistema da Suite (spec 005). Um vigente por sistema (índice
+// parcial na migration); trocar o papel encerra o vigente e abre outro.
+model EmployeeSystemAccess {
+  id         String            @id @default(uuid(7)) @db.Uuid
+  employeeId String            @map("employee_id") @db.Uuid
+  employee   FarmarcasEmployee @relation(fields: [employeeId], references: [id])
+  system     SuiteSystem
+  role       SuiteRole
+  grantedAt  DateTime          @default(now()) @map("granted_at") @db.Timestamptz(3)
+  grantedBy  String            @map("granted_by")
+  revokedAt  DateTime?         @map("revoked_at") @db.Timestamptz(3)
+  revokedBy  String?           @map("revoked_by")
+
+  @@index([employeeId])
+  @@map("employee_system_accesses")
 }
 
 // Parceiro da Farmarcas: indústria ou distribuidor. Dado da plataforma, sem tenant.

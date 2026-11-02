@@ -12,7 +12,7 @@ import {
   defaultSelfService,
   furnitureIcon,
 } from '@/lib/furniture-icons';
-import type { CatalogListConfig } from '../catalogKinds';
+import { inUseText, type CatalogListConfig } from '../catalogKinds';
 import type { CatalogItemInput, SettingsCatalogItem } from '../types';
 import { IconPicker } from './IconPicker';
 
@@ -74,7 +74,7 @@ export function CatalogItemModal({
   const errors = { ...fieldErrors(error), ...localErrors };
   const isConflict = error?.code === 'VERSION_CONFLICT';
   const isDuplicate = error?.code === 'DUPLICATE_NAME';
-  const renamesInUse = item !== null && item.storesInUse > 0 && values.name.trim() !== item.name;
+  const renamesInUse = item !== null && item.inUse > 0 && values.name.trim() !== item.name;
 
   const setField = <K extends keyof Values>(key: K, value: Values[K]) => {
     setValues((current) => ({
@@ -179,8 +179,8 @@ export function CatalogItemModal({
             role="alert"
             className="rounded-md bg-warning-soft px-3 py-2.5 text-sm text-warning-text"
           >
-            Este item está em uso por {item.storesInUse} {item.storesInUse === 1 ? 'loja' : 'lojas'}
-            . O nome muda em todas, sem perder o que elas informaram.
+            Este item está em uso por {inUseText(list, item.inUse).toLowerCase()}. O nome muda em
+            todos, sem perder o que já foi informado.
           </p>
         )}
         <TextField

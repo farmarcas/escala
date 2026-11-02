@@ -226,6 +226,7 @@ Na lista de lojas, a pessoa marca várias lojas e escolhe uma ação: exportar a
 - **FR-014**: Desligar MUST exigir motivo e MUST ser recusado enquanto a pessoa for Anjo de algum grupo.
 - **FR-015**: A lista MUST ter busca (nome, e-mail), filtros por área, papel e situação, os 4 indicadores da US1 e as colunas nome (com e-mail), área, cargo, papel, grupos como Anjo e situação.
 - **FR-016**: O detalhe do funcionário MUST mostrar os dados, a carteira de grupos que ele acompanha como Anjo (com link para cada grupo) e o histórico de mudanças do cadastro.
+- **Nota (spec 005)**: área, cargo, telefone e papel de acesso viraram departamento, ocupação, celular e telefone fixo, e acesso por sistema (Backoffice, Gestão 360, Escala) com papel Administrador, Gestor ou Analista. O detalhe virou "Perfil do usuário". Ver `specs/005-funcionario-acessos/spec.md`.
 - **FR-017**: Todo cadastro, mudança, desligamento e religamento de funcionário MUST gerar registro de auditoria com data/hora, ação, papel de quem fez e motivo (quando houver).
 
 **Anjo do grupo**

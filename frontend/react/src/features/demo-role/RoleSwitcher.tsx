@@ -7,7 +7,16 @@ import { formatGroupNumber } from '@/lib/format';
 import { useDemoRole } from './useDemoRole';
 
 const PLATFORM_ROLES = [
-  { value: 'admin', label: 'Administrador da plataforma', description: 'Cadastra e altera' },
+  {
+    value: 'admin',
+    label: 'Administrador da plataforma',
+    description: 'Tudo, inclusive funcionários, acessos e Configurações',
+  },
+  {
+    value: 'manager',
+    label: 'Gestor da plataforma',
+    description: 'Opera cadastros e solicitações, sem funcionários e Configurações',
+  },
   {
     value: 'analyst',
     label: 'Analista da plataforma',
@@ -52,7 +61,7 @@ export function RoleSwitcher() {
     };
   }, [isOpen]);
 
-  const choosePlatform = (role: 'admin' | 'analyst') => {
+  const choosePlatform = (role: (typeof PLATFORM_ROLES)[number]['value']) => {
     setRole(role);
     setIsOpen(false);
     if (isOwner) navigate('/');

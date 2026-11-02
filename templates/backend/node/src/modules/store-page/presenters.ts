@@ -5,6 +5,7 @@ export type ActorRef = { kind: 'PLATFORM' | 'TENANT' | 'SYSTEM'; subject: string
 
 const PLATFORM_ROLE_LABEL: Record<string, string> = {
   PLATFORM_ADMIN: 'Administrador da plataforma',
+  PLATFORM_MANAGER: 'Gestor da plataforma',
   PLATFORM_ANALYST: 'Analista da plataforma',
 };
 

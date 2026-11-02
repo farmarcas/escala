@@ -16,6 +16,7 @@ export const ownerHeaders = (groupId: string) => ({
 });
 export const PDF = Buffer.from('%PDF-1.4\n%%EOF\n');
 export const ANALYST_HEADERS = { 'x-demo-role': 'analyst' } as const;
+export const MANAGER_HEADERS = { 'x-demo-role': 'manager' } as const;
 export const admin: PlatformIdentity = {
   kind: 'platform',
   subject: 'OP-02',
@@ -27,7 +28,7 @@ export const resetBackoffice = async () => {
     `TRUNCATE store_custom_entries, store_free_fields, store_free_sections, store_catalog_entries, store_opening_hours,
               store_document_files, store_documents, store_change_request_events, store_change_requests,
               store_history, audit_events, stores, group_owners, economic_groups, brands, catalog_items,
-              farmarcas_employees, partner_contacts, partners
+              employee_system_accesses, farmarcas_employees, partner_contacts, partners
      RESTART IDENTITY CASCADE`,
   );
 };
@@ -121,18 +122,37 @@ export const createCatalogItem = (
   extra: { negotiatedMonthlyCents?: number; groupLabel?: string } = {},
 ) => ownerDb.catalogItem.create({ data: { kind, name, ...extra } });
 
-export const createEmployee = (
+// Departamento ou ocupação de Configurações (spec 005): reaproveita pelo nome.
+export const catalogEntry = async (kind: 'DEPARTMENT' | 'OCCUPATION', name: string) =>
+  (await ownerDb.catalogItem.findFirst({ where: { kind, name, deletedAt: null } })) ??
+  ownerDb.catalogItem.create({ data: { kind, name } });
+
+export const createEmployee = async (
   name: string,
-  options: { status?: 'ACTIVE' | 'TERMINATED'; email?: string } = {},
-) =>
-  ownerDb.farmarcasEmployee.create({
+  options: {
+    status?: 'ACTIVE' | 'TERMINATED';
+    email?: string;
+    access?: {
+      system: 'BACKOFFICE' | 'GESTAO_360' | 'ESCALA';
+      role: 'ADMIN' | 'MANAGER' | 'ANALYST';
+    }[];
+  } = {},
+) => {
+  const employee = await ownerDb.farmarcasEmployee.create({
     data: {
       name,
       email: options.email ?? `${name.toLowerCase().replace(/\s+/g, '.')}@farmarcas.com.br`,
-      area: 'MEMBER_SUCCESS',
-      jobTitle: 'Analista de relacionamento',
-      accessRole: 'PLATFORM_ANALYST',
+      mobile: '11900000000',
+      departmentId: (await catalogEntry('DEPARTMENT', 'Sucesso do associado')).id,
+      occupationId: (await catalogEntry('OCCUPATION', 'Analista de relacionamento')).id,
       status: options.status ?? 'ACTIVE',
       terminatedAt: options.status === 'TERMINATED' ? new Date() : null,
     },
   });
+  for (const access of options.access ?? []) {
+    await ownerDb.employeeSystemAccess.create({
+      data: { employeeId: employee.id, ...access, grantedBy: 'OP-02' },
+    });
+  }
+  return employee;
+};

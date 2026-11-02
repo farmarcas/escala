@@ -1,2 +1,2 @@
-export { EmployeeDetailView } from './components/EmployeeDetailView';
+export { EmployeeProfileView } from './components/EmployeeProfileView';
 export { EmployeesView } from './components/EmployeesView';

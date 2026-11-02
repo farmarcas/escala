@@ -6,13 +6,18 @@ export type CatalogSlug =
   | 'pbms'
   | 'strategies'
   | 'external-tools'
-  | 'channels';
+  | 'channels'
+  | 'departments'
+  | 'occupations';
 
 export type CatalogStatus = 'active' | 'inactive' | 'all';
+
+export type CatalogSection = 'store' | 'people';
 
 export type CatalogSummary = {
   kind: CatalogSlug;
   label: string;
+  section: CatalogSection;
   active: number;
   inactive: number;
 };
@@ -29,7 +34,8 @@ export type SettingsCatalogItem = {
   usedByScale: boolean;
   active: boolean;
   position: number;
-  storesInUse: number;
+  // Lojas (listas da loja) ou funcionários (listas de pessoas) que usam o item.
+  inUse: number;
   version: number;
   updatedAt: string;
 };

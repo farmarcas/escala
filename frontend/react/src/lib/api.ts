@@ -2,10 +2,10 @@
 // Envia o papel de demonstração (x-demo-role e, para o grupo, x-demo-tenant), que a API
 // só aceita no ambiente local.
 
-export type DemoRole = 'admin' | 'analyst' | 'owner';
+export type DemoRole = 'admin' | 'manager' | 'analyst' | 'owner';
 
 export type DemoIdentity =
-  | { role: 'admin' | 'analyst' }
+  | { role: 'admin' | 'manager' | 'analyst' }
   | { role: 'owner'; tenantId: string; tenantName: string; tenantNumber: number };
 
 export type FieldIssue = { path: string; message: string };

@@ -38,14 +38,27 @@ export const requireTenant = (req: Request, _res: Response, next: NextFunction) 
   next();
 };
 
-export const requirePlatformRole =
-  (role: PlatformRole) => (req: Request, _res: Response, next: NextFunction) => {
-    if (req.identity?.kind !== 'platform' || req.identity.role !== role) {
-      next(new ForbiddenError('Somente o Administrador da plataforma pode fazer isso'));
+export const requirePlatformRoles =
+  (roles: PlatformRole[], message: string) =>
+  (req: Request, _res: Response, next: NextFunction) => {
+    if (req.identity?.kind !== 'platform' || !roles.includes(req.identity.role)) {
+      next(new ForbiddenError(message));
       return;
     }
     next();
   };
+
+// Operação do Backoffice: administrador e gestor (spec 005, tabela "No Backoffice").
+export const operators = requirePlatformRoles(
+  ['PLATFORM_ADMIN', 'PLATFORM_MANAGER'],
+  'Somente o Administrador ou o Gestor da plataforma pode fazer isso',
+);
+
+// Funcionários, acessos e Configurações: só o administrador.
+export const adminOnly = requirePlatformRoles(
+  ['PLATFORM_ADMIN'],
+  'Somente o Administrador da plataforma pode fazer isso',
+);
 
 // Depois de requirePlatform, a identidade é sempre de plataforma.
 export const readPlatformIdentity = (req: Request): PlatformIdentity => {

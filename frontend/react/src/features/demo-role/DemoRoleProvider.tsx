@@ -7,12 +7,17 @@ export type DemoRoleContextValue = {
   identity: DemoIdentity;
   role: DemoRole;
   isAdmin: boolean;
+  // Administrador e gestor operam o Backoffice; funcionários, acessos e Configurações são só do
+  // administrador (spec 005).
+  canOperate: boolean;
   isOwner: boolean;
   // Chave que muda quando o papel ou o grupo mudam (as buscas recomeçam).
   identityKey: string;
-  setRole: (role: 'admin' | 'analyst') => void;
+  setRole: (role: PlatformDemoRole) => void;
   setOwner: (group: { id: string; name: string; number: number }) => void;
 };
+
+type PlatformDemoRole = 'admin' | 'manager' | 'analyst';
 
 export const DemoRoleContext = createContext<DemoRoleContextValue | null>(null);
 
@@ -23,7 +28,8 @@ function readStoredIdentity(): DemoIdentity {
     if (parsed && typeof parsed === 'object' && 'role' in parsed) {
       const value = parsed as DemoIdentity;
       if (value.role === 'owner' && value.tenantId) return value;
-      if (value.role === 'admin' || value.role === 'analyst') return { role: value.role };
+      if (value.role === 'admin' || value.role === 'manager' || value.role === 'analyst')
+        return { role: value.role };
     }
   } catch {
     // Sem armazenamento local, começa como administrador.
@@ -33,7 +39,7 @@ function readStoredIdentity(): DemoIdentity {
 
 type DemoRoleProviderProps = { children: ReactNode };
 
-// Papel de demonstração (Administrador, Analista ou Proprietário de um grupo). Só serve ao
+// Papel de demonstração (Administrador, Gestor, Analista ou Proprietário de um grupo). Só serve ao
 // ambiente local: em produção o papel e o grupo vêm do provedor de identidade, nunca da tela.
 export function DemoRoleProvider({ children }: DemoRoleProviderProps) {
   const [identity, setIdentityState] = useState<DemoIdentity>(() => {
@@ -52,7 +58,7 @@ export function DemoRoleProvider({ children }: DemoRoleProviderProps) {
     }
   }, []);
 
-  const setRole = useCallback((role: 'admin' | 'analyst') => setIdentity({ role }), [setIdentity]);
+  const setRole = useCallback((role: PlatformDemoRole) => setIdentity({ role }), [setIdentity]);
   const setOwner = useCallback(
     (group: { id: string; name: string; number: number }) =>
       setIdentity({
@@ -69,6 +75,7 @@ export function DemoRoleProvider({ children }: DemoRoleProviderProps) {
       identity,
       role: identity.role,
       isAdmin: identity.role === 'admin',
+      canOperate: identity.role === 'admin' || identity.role === 'manager',
       isOwner: identity.role === 'owner',
       identityKey: identity.role === 'owner' ? `owner:${identity.tenantId}` : identity.role,
       setRole,

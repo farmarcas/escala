@@ -2,10 +2,11 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { InlineAlert } from '@/components/ui/States';
 import { useMutation } from '@/hooks/useMutation';
-import { formatNumber } from '@/lib/format';
+import { inUseText, type CatalogListConfig } from '../catalogKinds';
 import type { SettingsCatalogItem } from '../types';
 
 type DeleteItemModalProps = {
+  list: CatalogListConfig;
   item: SettingsCatalogItem;
   onClose: () => void;
   onDelete: (item: SettingsCatalogItem) => Promise<unknown>;
@@ -13,16 +14,19 @@ type DeleteItemModalProps = {
 };
 
 // Excluir só sem uso; em uso, a saída é desativar (specs/004, FR-033).
-export function DeleteItemModal({ item, onClose, onDelete, onDeactivate }: DeleteItemModalProps) {
+export function DeleteItemModal({
+  list,
+  item,
+  onClose,
+  onDelete,
+  onDeactivate,
+}: DeleteItemModalProps) {
   const { run, isPending, error } = useMutation();
-  const storesInUse =
+  const inUse =
     error?.code === 'IN_USE'
-      ? Number(
-          (error.details[0] as unknown as { stores?: number } | undefined)?.stores ??
-            item.storesInUse,
-        )
-      : item.storesInUse;
-  const isInUse = storesInUse > 0;
+      ? Number((error.details[0] as unknown as { inUse?: number } | undefined)?.inUse ?? item.inUse)
+      : item.inUse;
+  const isInUse = inUse > 0;
 
   const act = async (action: () => Promise<unknown>) => {
     if (await run(action)) onClose();
@@ -56,15 +60,15 @@ export function DeleteItemModal({ item, onClose, onDelete, onDeactivate }: Delet
         {error && error.code !== 'IN_USE' && <InlineAlert>{error.message}</InlineAlert>}
         {isInUse ? (
           <p>
-            Em uso por {formatNumber(storesInUse)} {storesInUse === 1 ? 'loja' : 'lojas'}.{' '}
+            Em uso por {inUseText(list, inUse).toLowerCase()}.{' '}
             {item.active
-              ? 'Desative em vez de excluir: o item sai das opções novas e continua nas lojas que já usam, com o que elas informaram.'
-              : 'O item já está desativado e continua só nas lojas que já usam.'}
+              ? 'Desative em vez de excluir: o item sai das opções novas e continua com quem já usa, sem perder o que foi informado.'
+              : 'O item já está desativado e continua só com quem já usa.'}
           </p>
         ) : (
           <p>
-            O item some das listas e das opções das lojas. O histórico das lojas continua mostrando
-            o nome. Esta ação não pode ser desfeita.
+            O item some das listas e das opções. Os históricos continuam mostrando o nome. Esta ação
+            não pode ser desfeita.
           </p>
         )}
       </div>

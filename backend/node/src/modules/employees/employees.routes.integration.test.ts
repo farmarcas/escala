@@ -5,6 +5,8 @@ import { prisma } from '../../shared/database/prisma.js';
 import {
   ADMIN_HEADERS,
   ANALYST_HEADERS,
+  MANAGER_HEADERS,
+  catalogEntry,
   createBrand,
   createEmployee,
   createGroup,
@@ -21,11 +23,23 @@ describe('funcionários da Farmarcas e Anjo do grupo', () => {
   let isabela: { id: string };
   let groupA: { id: string };
   let groupB: { id: string };
+  let trade: { id: string };
+  let analyst: { id: string };
+  let coordinator: { id: string };
+  let bruno: { id: string };
 
   beforeEach(async () => {
     await resetBackoffice();
     const brand = await createBrand('rede teste');
-    juliana = await createEmployee('Juliana Prado');
+    trade = await catalogEntry('DEPARTMENT', 'Trade');
+    analyst = await catalogEntry('OCCUPATION', 'Analista de relacionamento');
+    coordinator = await catalogEntry('OCCUPATION', 'Coordenadora de relacionamento');
+    bruno = await createEmployee('Bruno Castro', {
+      access: [{ system: 'BACKOFFICE', role: 'ADMIN' }],
+    });
+    juliana = await createEmployee('Juliana Prado', {
+      access: [{ system: 'BACKOFFICE', role: 'ANALYST' }],
+    });
     isabela = await createEmployee('Isabela Nunes');
     groupA = await createGroup(101, 'Grupo A');
     groupB = await createGroup(202, 'Grupo B');
@@ -50,12 +64,12 @@ describe('funcionários da Farmarcas e Anjo do grupo', () => {
       .get(`${BASE}/employees?status=ACTIVE,TERMINATED`)
       .set(ADMIN_HEADERS);
     const facets = await request(app)
-      .get(`${BASE}/employees/facets?field=status&area=MEMBER_SUCCESS`)
+      .get(`${BASE}/employees/facets?field=status&search=a`)
       .set(ANALYST_HEADERS);
 
-    expect(both.body.meta.total).toBe(3);
+    expect(both.body.meta.total).toBe(4);
     expect(facets.body.data).toEqual([
-      { value: 'ACTIVE', count: 2 },
+      { value: 'ACTIVE', count: 3 },
       { value: 'TERMINATED', count: 1 },
     ]);
   });
@@ -64,59 +78,184 @@ describe('funcionários da Farmarcas e Anjo do grupo', () => {
     const created = await request(app).post(`${BASE}/employees`).set(ADMIN_HEADERS).send({
       name: 'Marília Duarte',
       email: 'Marilia.Duarte@farmarcas.com.br',
-      phone: '(11) 90000-7781',
-      area: 'MEMBER_SUCCESS',
-      jobTitle: 'Analista de relacionamento',
-      accessRole: 'PLATFORM_ANALYST',
+      gender: 'FEMALE',
+      mobile: '(11) 9 6034-8829',
+      landline: '',
+      departmentId: trade.id,
+      occupationId: analyst.id,
     });
     expect(created.status).toBe(201);
     expect(created.body).toMatchObject({
       email: 'marilia.duarte@farmarcas.com.br',
-      phone: '11900007781',
+      mobile: '11960348829',
+      landline: null,
+      department: { name: 'Trade', active: true },
+      occupation: { name: 'Analista de relacionamento' },
       status: 'ACTIVE',
+      accesses: [],
+      version: 1,
       portfolioCount: 0,
     });
 
     const edited = await request(app)
       .patch(`${BASE}/employees/${created.body.id}`)
       .set(ADMIN_HEADERS)
-      .send({ jobTitle: 'Coordenadora de relacionamento' });
-    expect(edited.body.jobTitle).toBe('Coordenadora de relacionamento');
+      .send({ version: 1, occupationId: coordinator.id, landline: '(11) 3045-0000' });
+    const stale = await request(app)
+      .patch(`${BASE}/employees/${created.body.id}`)
+      .set(ADMIN_HEADERS)
+      .send({ version: 1, name: 'Marília D.' });
+    expect(edited.body).toMatchObject({
+      occupation: { name: 'Coordenadora de relacionamento' },
+      landline: '1130450000',
+      version: 2,
+    });
+    expect(stale.body.error.code).toBe('VERSION_CONFLICT');
 
     const list = await request(app)
-      .get(`${BASE}/employees?search=mar%C3%ADlia`)
+      .get(`${BASE}/employees?search=coordenadora`)
       .set(ANALYST_HEADERS);
     expect(list.body.meta.total).toBe(1);
 
     const history = await request(app)
       .get(`${BASE}/employees/${created.body.id}/audit-events`)
       .set(ADMIN_HEADERS);
-    expect(history.body.data.map((event: { action: string }) => event.action)).toEqual([
-      'EMPLOYEE_UPDATED',
-      'EMPLOYEE_CREATED',
+    expect(history.body.data.map((event: { summary: string }) => event.summary)).toEqual([
+      'Telefone fixo: (vazio) → (11) 3045-0000; Ocupação: Analista de relacionamento → Coordenadora de relacionamento',
+      'Funcionário Marília Duarte cadastrado',
     ]);
   });
 
-  it('deve recusar e-mail repetido, sem diferenciar maiúsculas', async () => {
-    const response = await request(app).post(`${BASE}/employees`).set(ADMIN_HEADERS).send({
+  it('deve recusar e-mail repetido, celular inválido e ocupação desativada nova', async () => {
+    const body = {
       name: 'Outra Juliana',
       email: 'JULIANA.PRADO@farmarcas.com.br',
-      area: 'TRADE',
-      jobTitle: 'Analista',
-      accessRole: 'NONE',
-    });
+      mobile: '11900000001',
+      departmentId: trade.id,
+      occupationId: analyst.id,
+    };
+    const duplicate = await request(app).post(`${BASE}/employees`).set(ADMIN_HEADERS).send(body);
+    const badMobile = await request(app)
+      .post(`${BASE}/employees`)
+      .set(ADMIN_HEADERS)
+      .send({ ...body, email: 'nova@farmarcas.com.br', mobile: '1190000000' });
+    await ownerDb.catalogItem.update({ where: { id: coordinator.id }, data: { active: false } });
+    const inactive = await request(app)
+      .patch(`${BASE}/employees/${juliana.id}`)
+      .set(ADMIN_HEADERS)
+      .send({ version: 1, occupationId: coordinator.id });
+    const options = await request(app).get(`${BASE}/employees/options`).set(ANALYST_HEADERS);
 
-    expect(response.status).toBe(409);
-    expect(response.body.error.code).toBe('EMPLOYEE_EMAIL_TAKEN');
+    expect(duplicate.body.error.code).toBe('EMPLOYEE_EMAIL_TAKEN');
+    expect(badMobile.status).toBe(400);
+    expect(inactive.body.error.code).toBe('CATALOG_ITEM_INACTIVE');
+    expect(options.body.occupations.map((item: { name: string }) => item.name)).toEqual([
+      'Analista de relacionamento',
+    ]);
+    expect(options.body.systems.map((item: { system: string }) => item.system)).toEqual([
+      'BACKOFFICE',
+      'GESTAO_360',
+      'ESCALA',
+    ]);
   });
 
-  it('o analista só consulta', async () => {
-    const response = await request(app)
-      .patch(`${BASE}/employees/${juliana.id}`)
-      .set(ANALYST_HEADERS)
-      .send({ jobTitle: 'Outro' });
+  it('gestor e analista só consultam funcionários', async () => {
+    const responses = await Promise.all(
+      [MANAGER_HEADERS, ANALYST_HEADERS].flatMap((headers) => [
+        request(app)
+          .patch(`${BASE}/employees/${juliana.id}`)
+          .set(headers)
+          .send({ version: 1, name: 'Outro' }),
+        request(app)
+          .put(`${BASE}/employees/${juliana.id}/accesses/BACKOFFICE`)
+          .set(headers)
+          .send({ role: 'ADMIN' }),
+      ]),
+    );
+    const read = await request(app).get(`${BASE}/employees/${juliana.id}`).set(MANAGER_HEADERS);
 
-    expect(response.status).toBe(403);
+    expect(responses.map((response) => response.status)).toEqual([403, 403, 403, 403]);
+    expect(read.status).toBe(200);
+  });
+
+  it('dá, troca e tira acesso por sistema, com histórico e filtro', async () => {
+    const path = (system: string) => `${BASE}/employees/${juliana.id}/accesses/${system}`;
+    await request(app).put(path('GESTAO_360')).set(ADMIN_HEADERS).send({ role: 'ANALYST' });
+    const changed = await request(app)
+      .put(path('BACKOFFICE'))
+      .set(ADMIN_HEADERS)
+      .send({ role: 'MANAGER' });
+    const same = await request(app)
+      .put(path('BACKOFFICE'))
+      .set(ADMIN_HEADERS)
+      .send({ role: 'MANAGER' });
+    const managers = await request(app)
+      .get(`${BASE}/employees?access=BACKOFFICE:MANAGER`)
+      .set(ADMIN_HEADERS);
+    const none = await request(app).get(`${BASE}/employees?access=NONE`).set(ADMIN_HEADERS);
+    await request(app).put(path('GESTAO_360')).set(ADMIN_HEADERS).send({ role: null });
+    const detail = await request(app).get(`${BASE}/employees/${juliana.id}`).set(ADMIN_HEADERS);
+    const history = await request(app)
+      .get(`${BASE}/employees/${juliana.id}/audit-events`)
+      .set(ADMIN_HEADERS);
+    const stats = await request(app).get(`${BASE}/employees/stats`).set(ADMIN_HEADERS);
+
+    expect(changed.body.accesses).toEqual([
+      expect.objectContaining({ system: 'GESTAO_360', role: 'ANALYST' }),
+      expect.objectContaining({ system: 'BACKOFFICE', role: 'MANAGER', grantedBy: 'OP-02' }),
+    ]);
+    expect(same.status).toBe(200);
+    expect(managers.body.data.map((row: { name: string }) => row.name)).toEqual(['Juliana Prado']);
+    expect(none.body.data.map((row: { name: string }) => row.name)).toEqual(['Isabela Nunes']);
+    expect(detail.body.accesses).toEqual([
+      expect.objectContaining({ system: 'BACKOFFICE', role: 'MANAGER' }),
+    ]);
+    expect(history.body.data.map((event: { summary: string }) => event.summary)).toEqual([
+      'Gestão 360: Analista → sem acesso',
+      'Backoffice: Analista → Gestor',
+      'Gestão 360: sem acesso → Analista',
+    ]);
+    expect(stats.body.admins).toBe(1);
+  });
+
+  it('o Backoffice nunca fica sem administrador; desligar encerra os acessos', async () => {
+    const demote = await request(app)
+      .put(`${BASE}/employees/${bruno.id}/accesses/BACKOFFICE`)
+      .set(ADMIN_HEADERS)
+      .send({ role: 'MANAGER' });
+    const terminateLast = await request(app)
+      .post(`${BASE}/employees/${bruno.id}/status`)
+      .set(ADMIN_HEADERS)
+      .send({ action: 'terminate', justification: 'Saiu da empresa' });
+    await request(app)
+      .put(`${BASE}/employees/${juliana.id}/accesses/BACKOFFICE`)
+      .set(ADMIN_HEADERS)
+      .send({ role: 'ADMIN' });
+    const terminated = await request(app)
+      .post(`${BASE}/employees/${bruno.id}/status`)
+      .set(ADMIN_HEADERS)
+      .send({ action: 'terminate', justification: 'Saiu da empresa' });
+    const grantTerminated = await request(app)
+      .put(`${BASE}/employees/${bruno.id}/accesses/ESCALA`)
+      .set(ADMIN_HEADERS)
+      .send({ role: 'ANALYST' });
+    const rehired = await request(app)
+      .post(`${BASE}/employees/${bruno.id}/status`)
+      .set(ADMIN_HEADERS)
+      .send({ action: 'rehire', justification: 'Voltou para a empresa' });
+
+    expect(demote.body.error.code).toBe('LAST_ADMIN');
+    expect(terminateLast.body.error.code).toBe('LAST_ADMIN');
+    expect(terminated.body.status).toBe('TERMINATED');
+    expect(terminated.body.accesses).toEqual([
+      expect.objectContaining({
+        system: 'BACKOFFICE',
+        role: 'ADMIN',
+        revokedAt: expect.any(String),
+      }),
+    ]);
+    expect(grantTerminated.body.error.code).toBe('EMPLOYEE_TERMINATED');
+    expect(rehired.body).toMatchObject({ status: 'ACTIVE', accesses: [] });
   });
 
   it('não deve desligar quem é Anjo de grupo em operação', async () => {

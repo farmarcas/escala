@@ -6,12 +6,12 @@ import { PartnerDetailView } from '@/features/partners';
 
 export function PartnerDetailPage() {
   const { id = '' } = useParams();
-  const { isAdmin } = useDemoRole();
+  const { canOperate } = useDemoRole();
   return (
     <PageBody>
       <PartnerDetailView
         id={id}
-        canEdit={isAdmin}
+        canEdit={canOperate}
         renderHistory={(partner) => (
           <AuditTrail
             key={partner.updatedAt}

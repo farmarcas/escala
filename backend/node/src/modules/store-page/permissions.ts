@@ -15,7 +15,8 @@ export type Viewer = {
 // para o próprio grupo (a Farmarcas continua operando).
 export const viewerOf = (identity: Identity, groupStatus: string): Viewer => {
   if (identity.kind === 'platform') {
-    const isAnalyst = identity.role !== 'PLATFORM_ADMIN';
+    // Gestor opera como o administrador; só o analista fica em leitura (spec 005).
+    const isAnalyst = identity.role === 'PLATFORM_ANALYST';
     return {
       side: 'platform',
       subject: identity.subject,

@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Cell, HeaderCell, Row, Table } from '@/components/ui/Table';
 import { formatNumber } from '@/lib/format';
-import { ACCESS_ROLE_LABEL, AREA_LABEL, EMPLOYEE_STATUS } from '../labels';
+import { EMPLOYEE_STATUS, ROLE_LABEL, ROLE_TONE, SYSTEM_LABEL } from '../labels';
 import type { Employee } from '../types';
 
 type EmployeesTableProps = { employees: Employee[] };
@@ -10,13 +10,13 @@ type EmployeesTableProps = { employees: Employee[] };
 export function EmployeesTable({ employees }: EmployeesTableProps) {
   const navigate = useNavigate();
   return (
-    <Table label="Funcionários da Farmarcas" minWidth="980px">
+    <Table label="Funcionários da Farmarcas" minWidth="1040px">
       <thead>
         <tr>
           <HeaderCell>Funcionário</HeaderCell>
-          <HeaderCell>Área</HeaderCell>
-          <HeaderCell>Cargo</HeaderCell>
-          <HeaderCell>Papel de acesso</HeaderCell>
+          <HeaderCell>Departamento</HeaderCell>
+          <HeaderCell>Ocupação</HeaderCell>
+          <HeaderCell>Acessos</HeaderCell>
           <HeaderCell isNumeric title="Grupos em operação que a pessoa acompanha como Anjo">
             Grupos como Anjo
           </HeaderCell>
@@ -26,6 +26,7 @@ export function EmployeesTable({ employees }: EmployeesTableProps) {
       <tbody>
         {employees.map((employee) => {
           const status = EMPLOYEE_STATUS[employee.status];
+          const accesses = employee.status === 'ACTIVE' ? employee.accesses : [];
           return (
             <Row
               key={employee.id}
@@ -37,10 +38,20 @@ export function EmployeesTable({ employees }: EmployeesTableProps) {
                 <p className="truncate font-semibold">{employee.name}</p>
                 <p className="truncate text-xs text-muted-foreground">{employee.email}</p>
               </Cell>
-              <Cell className="text-secondary-foreground">{AREA_LABEL[employee.area]}</Cell>
-              <Cell className="text-secondary-foreground">{employee.jobTitle}</Cell>
-              <Cell className="whitespace-nowrap text-[13px] text-secondary-foreground">
-                {ACCESS_ROLE_LABEL[employee.accessRole]}
+              <Cell className="text-secondary-foreground">{employee.department.name}</Cell>
+              <Cell className="text-secondary-foreground">{employee.occupation.name}</Cell>
+              <Cell>
+                {accesses.length === 0 ? (
+                  <span className="text-[13px] text-muted-foreground">Sem acesso</span>
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {accesses.map((access) => (
+                      <StatusBadge key={access.system} tone={ROLE_TONE[access.role]} size="sm">
+                        {SYSTEM_LABEL[access.system]} · {ROLE_LABEL[access.role]}
+                      </StatusBadge>
+                    ))}
+                  </div>
+                )}
               </Cell>
               <Cell isNumeric className="font-semibold">
                 {employee.portfolioCount ? formatNumber(employee.portfolioCount) : '—'}

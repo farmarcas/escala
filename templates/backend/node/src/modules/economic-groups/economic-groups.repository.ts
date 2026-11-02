@@ -127,8 +127,8 @@ const selectGroups = (where: Prisma.Sql, tail: Prisma.Sql = Prisma.empty) => Pri
   SELECT g.id, g.number, g.name, g.legal_name, g.status,
          o.name AS owner_name, o.email AS owner_email, o.phone AS owner_phone,
          o.pseudonym AS owner_pseudonym,
-         a.id AS angel_id, a.name AS angel_name, a.job_title AS angel_job_title,
-         a.email AS angel_email, a.phone AS angel_phone,
+         a.id AS angel_id, a.name AS angel_name, ao.name AS angel_job_title,
+         a.email AS angel_email, coalesce(a.mobile, a.landline) AS angel_phone,
          count(s.id)::int AS store_count,
          (count(s.id) FILTER (WHERE s.type = 'PDV'))::int AS pdv_count,
          (count(s.id) FILTER (WHERE s.type = 'CD'))::int AS cd_count,
@@ -138,10 +138,11 @@ const selectGroups = (where: Prisma.Sql, tail: Prisma.Sql = Prisma.empty) => Pri
     FROM economic_groups g
     ${ownerJoin}
     LEFT JOIN farmarcas_employees a ON a.id = g.angel_employee_id
+    LEFT JOIN catalog_items ao ON ao.id = a.occupation_id
     LEFT JOIN stores s ON s.economic_group_id = g.id AND s.deleted_at IS NULL
     LEFT JOIN brands b ON b.id = s.brand_id
    WHERE ${where}
-   GROUP BY g.id, o.id, a.id
+   GROUP BY g.id, o.id, a.id, ao.id
    ${tail}`;
 
 const findDetail = async (tx: Tx, where: Prisma.Sql): Promise<GroupDetailRecord | null> => {
