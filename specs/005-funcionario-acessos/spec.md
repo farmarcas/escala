@@ -185,6 +185,7 @@ O Backoffice passa a reconhecer três papéis. O gestor faz o trabalho de opera�
 - **FR-024**: O Backoffice MUST ter sempre pelo menos um administrador ativo. O sistema recusa tirar, rebaixar ou desligar o último.
 - **FR-025**: Desligar MUST encerrar todos os acessos da pessoa. Religar MUST trazer a pessoa sem acesso.
 - **FR-026**: Toda concessão, troca e retirada de acesso MUST entrar no histórico do funcionário com o antes e o depois.
+- **FR-026a**: A aba MUST mostrar os módulos como widgets numa grade de 3 a 4 colunas (1 no celular), um por módulo, com o nível de acesso, o que ele permite e a data. Cada módulo pode ganhar recursos e níveis de acesso próprios dentro do seu widget. Todo módulo novo da Suite MUST aparecer nesta aba.
 - **FR-027**: Na lista de funcionários:
   - a coluna "Papel" MUST virar "Acessos";
   - o filtro "Papel" MUST virar "Sistema e papel";

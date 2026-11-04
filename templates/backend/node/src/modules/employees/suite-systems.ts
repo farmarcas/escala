@@ -1,7 +1,9 @@
 import type { SuiteRole, SuiteSystem } from '../../generated/prisma/client.js';
 
-// Sistemas da Suite em que um funcionário da Farmarcas pode ter acesso (spec 005). Os que ainda
-// não estão no ar guardam o acesso, que passa a valer quando o sistema entrar.
+// Sistemas (módulos) da Suite em que um funcionário da Farmarcas pode ter acesso (spec 005).
+// Todo módulo novo da Suite entra aqui (e no enum suite_system), para aparecer na aba Sistemas e
+// acesso do perfil do funcionário. Os que ainda não estão no ar guardam o acesso, que passa a
+// valer quando o sistema entrar.
 export const SUITE_SYSTEMS: {
   system: SuiteSystem;
   label: string;
