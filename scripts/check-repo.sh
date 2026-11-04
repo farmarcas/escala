@@ -45,7 +45,17 @@ grep -q '^@AGENTS.md' CLAUDE.md || fail "CLAUDE.md deve importar @AGENTS.md"
 # 5. Porta publicada só em 127.0.0.1 e sem credencial fixa de banco no Compose
 grep -E '^\s+- "[^"]*:[0-9]+"' docker-compose.yml | grep -v '127.0.0.1:' && fail "porta publicada fora de 127.0.0.1 em docker-compose.yml" || true
 
-# 6. Templates em dia
+# 6. Galeria de ícones do mobiliário: as chaves da tela e da API são as mesmas (specs/004, R10)
+python3 - <<'PY' || FAIL=1
+import re, sys
+api = re.findall(r"^  '([a-z0-9-]+)',", open("backend/node/src/modules/settings-catalog/furniture-icons.ts", encoding="utf-8").read(), re.M)
+web = re.findall(r"key: '([a-z0-9-]+)'", open("frontend/react/src/lib/furniture-icons.ts", encoding="utf-8").read())
+if not api or sorted(api) != sorted(web):
+    print(f"ERRO: chaves de ícone diferentes entre API e tela: só na API {sorted(set(api) - set(web))}, só na tela {sorted(set(web) - set(api))}")
+    sys.exit(1)
+PY
+
+# 7. Templates em dia
 sh scripts/sync-templates.sh --check || FAIL=1
 
 [ "$FAIL" = 0 ] && echo "OK: repositório consistente" || exit 1

@@ -1,8 +1,8 @@
 generator client {
-  provider             = "prisma-client"
-  output               = "../src/generated/prisma"
-  moduleFormat         = "esm"
-  importFileExtension  = "js"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
 }
 
 datasource db {
@@ -21,4 +21,662 @@ model User {
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Backoffice Farmarcas (specs/001-backoffice-cadastros/data-model.md)
+// Multi-tenant: o grupo econômico (GE) é o tenant. Tabelas do tenant carregam
+// economic_group_id e têm RLS (políticas no SQL da migration). `brands` é
+// catálogo da plataforma, sem tenant. Collation pt_br e índices parciais
+// também vivem no SQL da migration.
+// ---------------------------------------------------------------------------
+
+enum BrandStatus {
+  ACTIVE
+  HISTORICAL
+
+  @@map("brand_status")
+}
+
+enum GroupStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+
+  @@map("group_status")
+}
+
+enum StoreType {
+  PDV
+  CD
+
+  @@map("store_type")
+}
+
+enum StoreStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+
+  @@map("store_status")
+}
+
+enum TaxRegime {
+  SIMPLES
+  PRESUMIDO
+  REAL
+
+  @@map("tax_regime")
+}
+
+enum ChangeRequestType {
+  CNPJ
+  ADDRESS
+  BRAND
+  TAX_REGIME
+
+  @@map("change_request_type")
+}
+
+enum ChangeRequestStatus {
+  OPEN
+  EFFECTIVE
+  REJECTED
+  CONTESTED
+  CANCELLED
+
+  @@map("change_request_status")
+}
+
+enum ActorKind {
+  PLATFORM
+  TENANT
+  SYSTEM
+
+  @@map("actor_kind")
+}
+
+enum StoreDocumentType {
+  CNPJ_CARD
+  OPERATING_PERMIT
+  SANITARY_LICENSE
+  AFE
+  CRF
+  ASSOCIATION_CONTRACT
+  ADDRESS_PROOF
+  ARTICLES
+  OPTION_TERM
+
+  @@map("store_document_type")
+}
+
+enum CatalogKind {
+  SERVICE
+  DEMAND_SYSTEM
+  PRACTICE_TOOL
+  PBM
+  STRATEGY
+  FURNITURE
+  EXTERNAL_TOOL
+  CHANNEL
+  // Listas de pessoas da Farmarcas (spec 005).
+  DEPARTMENT
+  OCCUPATION
+
+  @@map("catalog_kind")
+}
+
+enum Weekday {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
+  HOLIDAY
+
+  @@map("weekday")
+}
+
+enum StoreHistoryKind {
+  EDIT
+  REQUEST
+  DOCUMENT
+  VALIDATION
+  REMINDER
+
+  @@map("store_history_kind")
+}
+
+// Fase 2 do Backoffice (specs/003-backoffice-fase-2/data-model.md).
+// Spec 005: gênero do funcionário, sistemas da Suite e papel em cada sistema.
+enum EmployeeGender {
+  FEMALE
+  MALE
+  OTHER
+  UNDISCLOSED
+
+  @@map("employee_gender")
+}
+
+enum SuiteSystem {
+  BACKOFFICE
+  GESTAO_360
+  ESCALA
+
+  @@map("suite_system")
+}
+
+enum SuiteRole {
+  ADMIN
+  MANAGER
+  ANALYST
+
+  @@map("suite_role")
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  TERMINATED
+
+  @@map("employee_status")
+}
+
+enum PartnerType {
+  INDUSTRY
+  DISTRIBUTOR
+
+  @@map("partner_type")
+}
+
+enum PartnerStatus {
+  ACTIVE
+  INACTIVE
+
+  @@map("partner_status")
+}
+
+// Etapa da loja na rede (independente da situação: pendente, ativa, inativa).
+enum StoreStage {
+  PROSPECTING
+  SETUP
+  OPENED
+
+  @@map("store_stage")
+}
+
+enum AuditEntity {
+  GROUP
+  EMPLOYEE
+  PARTNER
+  CATALOG_ITEM
+
+  @@map("audit_entity")
+}
+
+model Brand {
+  id             String      @id @default(uuid(7)) @db.Uuid
+  name           String
+  normalizedName String      @map("normalized_name")
+  status         BrandStatus @default(ACTIVE)
+  deletedAt      DateTime?   @map("deleted_at") @db.Timestamptz(3)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  stores         Store[]
+
+  @@map("brands")
+}
+
+// O tenant. `number` é o número do GE emitido pela Farmarcas: único e imutável.
+model EconomicGroup {
+  id              String             @id @default(uuid(7)) @db.Uuid
+  number          Int                @unique @default(autoincrement())
+  name            String
+  legalName       String             @map("legal_name")
+  cnpj            String             @db.Char(14)
+  status          GroupStatus        @default(ACTIVE)
+  deletedAt       DateTime?          @map("deleted_at") @db.Timestamptz(3)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  // Anjo: funcionário da Farmarcas que acompanha o grupo (um por grupo).
+  angelEmployeeId String?            @map("angel_employee_id") @db.Uuid
+  angel           FarmarcasEmployee? @relation(fields: [angelEmployeeId], references: [id], onDelete: Restrict)
+  owners          GroupOwner[]
+  stores          Store[]
+  auditEvents     AuditEvent[]
+  benefitCard     GroupBenefitCard?
+
+  @@index([angelEmployeeId])
+  @@map("economic_groups")
+}
+
+// Proprietário do GE. Nome, e-mail e telefone são dados pessoais: só o
+// PLATFORM_ADMIN recebe; o analista vê apenas o pseudônimo.
+model GroupOwner {
+  id              String        @id @default(uuid(7)) @db.Uuid
+  economicGroupId String        @map("economic_group_id") @db.Uuid
+  economicGroup   EconomicGroup @relation(fields: [economicGroupId], references: [id])
+  name            String
+  email           String
+  phone           String
+  pseudonym       String        @unique
+  deletedAt       DateTime?     @map("deleted_at") @db.Timestamptz(3)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("group_owners")
+}
+
+model Store {
+  id                   String               @id @default(uuid(7)) @db.Uuid
+  code                 Int                  @unique @default(autoincrement())
+  economicGroupId      String               @map("economic_group_id") @db.Uuid
+  economicGroup        EconomicGroup        @relation(fields: [economicGroupId], references: [id])
+  brandId              String               @map("brand_id") @db.Uuid
+  brand                Brand                @relation(fields: [brandId], references: [id])
+  // Apelido: nome do dia a dia da loja (dado básico).
+  name                 String
+  type                 StoreType
+  status               StoreStatus          @default(PENDING)
+  stage                StoreStage           @default(PROSPECTING)
+  // Bloqueio: corta o acesso do grupo à loja (spec 003, US4); a Farmarcas continua vendo.
+  blockedAt            DateTime?            @map("blocked_at") @db.Timestamptz(3)
+  blockedReason        String?              @map("blocked_reason")
+  blockedBy            String?              @map("blocked_by")
+  // Identificação na Receita: muda só por solicitação (specs/002, camadas da loja).
+  cnpj                 String               @db.Char(14)
+  legalName            String?              @map("legal_name")
+  stateRegistration    String?              @map("state_registration")
+  zip                  String?              @db.Char(8)
+  street               String
+  number               String?
+  district             String?
+  city                 String
+  uf                   String               @db.Char(2)
+  // Rede e negócio: regime muda por solicitação; os demais são dados básicos.
+  taxRegime            TaxRegime?           @map("tax_regime")
+  storeCategory        String?              @map("store_category")
+  affiliatedNetwork    String?              @map("affiliated_network")
+  openedAt             DateTime?            @map("opened_at") @db.Date
+  // Dados básicos e contato (o grupo mantém; a Farmarcas corrige com motivo).
+  tradeName            String?              @map("trade_name")
+  phone1               String?
+  phone2               String?
+  whatsapp             String?
+  deliveryPhone        String?              @map("delivery_phone")
+  email                String?
+  // Dados pessoais do proprietário: só o grupo edita; o analista recebe mascarado.
+  ownerMobile          String?              @map("owner_mobile")
+  ownerPersonalEmail   String?              @map("owner_personal_email")
+  // Endereço popular: como o cliente encontra a loja.
+  popZip               String?              @map("pop_zip") @db.Char(8)
+  popStreet            String?              @map("pop_street")
+  popNumber            String?              @map("pop_number")
+  popDistrict          String?              @map("pop_district")
+  popComplement        String?              @map("pop_complement")
+  popCity              String?              @map("pop_city")
+  popUf                String?              @map("pop_uf") @db.Char(2)
+  // Estrutura da loja (dados básicos, fatia 2).
+  ownBuilding          Boolean?             @map("own_building")
+  areaM2               Int?                 @map("area_m2")
+  salesAreaM2          Int?                 @map("sales_area_m2")
+  staffCount           Int?                 @map("staff_count")
+  demandSystemId       String?              @map("demand_system_id") @db.Uuid
+  demandSystem         CatalogItem?         @relation("StoreDemandSystem", fields: [demandSystemId], references: [id])
+  // Grupo declarou que a loja não usa ferramentas externas (fatia 3).
+  noExternalTools      Boolean              @default(false) @map("no_external_tools")
+  // Governança: validação semestral e preenchimento (recalculado a cada gravação).
+  validatedAt          DateTime?            @map("validated_at") @db.Timestamptz(3)
+  validatedBy          String?              @map("validated_by")
+  validationRemindedAt DateTime?            @map("validation_reminded_at") @db.Timestamptz(3)
+  completenessFilled   Int                  @default(0) @map("completeness_filled")
+  completenessTotal    Int                  @default(0) @map("completeness_total")
+  version              Int                  @default(1)
+  deletedAt            DateTime?            @map("deleted_at") @db.Timestamptz(3)
+  createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  benefitCards         GroupBenefitCard[]
+  changeRequests       StoreChangeRequest[]
+  documents            StoreDocument[]
+  history              StoreHistory[]
+  openingHours         StoreOpeningHour[]
+  catalogEntries       StoreCatalogEntry[]
+  freeSections         StoreFreeSection[]
+  customEntries        StoreCustomEntry[]
+
+  @@index([economicGroupId])
+  @@index([brandId])
+  @@map("stores")
+}
+
+// Trilha append-only: sem updated_at nem deleted_at (o usuário da aplicação só insere e lê).
+model AuditEvent {
+  id              String         @id @default(uuid(7)) @db.Uuid
+  economicGroupId String?        @map("economic_group_id") @db.Uuid
+  economicGroup   EconomicGroup? @relation(fields: [economicGroupId], references: [id])
+  action          String
+  summary         String
+  actorSubject    String         @map("actor_subject")
+  actorRole       String         @map("actor_role")
+  justification   String?
+  // Registro a que o evento se refere: grupo, funcionário ou parceiro (fase 2).
+  entityType      AuditEntity?   @map("entity_type")
+  entityId        String?        @map("entity_id") @db.Uuid
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([economicGroupId, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@map("audit_events")
+}
+
+// ---------------------------------------------------------------------------
+// Página da loja (specs/002-pagina-da-loja/data-model.md). Tabelas do tenant com RLS.
+// ---------------------------------------------------------------------------
+
+// Pedido de mudança em dado sensível (CNPJ, endereço da Receita, bandeira, regime).
+// Os valores pedidos variam por tipo: jsonb validado por Zod (plan.md, Complexity Tracking).
+model StoreChangeRequest {
+  id              String                    @id @default(uuid(7)) @db.Uuid
+  storeId         String                    @map("store_id") @db.Uuid
+  store           Store                     @relation(fields: [storeId], references: [id])
+  economicGroupId String                    @map("economic_group_id") @db.Uuid
+  type            ChangeRequestType
+  origin          ActorKind
+  requestedBy     String                    @map("requested_by")
+  requestedValues Json                      @map("requested_values")
+  effectiveDate   DateTime?                 @map("effective_date") @db.Date
+  justification   String
+  currentStep     Int                       @default(1) @map("current_step")
+  status          ChangeRequestStatus       @default(OPEN)
+  closedNote      String?                   @map("closed_note")
+  version         Int                       @default(1)
+  createdAt       DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  events          StoreChangeRequestEvent[]
+  documents       StoreDocument[]
+
+  @@index([storeId, status])
+  @@map("store_change_requests")
+}
+
+// Linha do tempo da solicitação (somente acréscimo).
+model StoreChangeRequestEvent {
+  id           String             @id @default(uuid(7)) @db.Uuid
+  requestId    String             @map("request_id") @db.Uuid
+  request      StoreChangeRequest @relation(fields: [requestId], references: [id])
+  stepIndex    Int                @map("step_index")
+  action       String
+  actorKind    ActorKind          @map("actor_kind")
+  actorSubject String             @map("actor_subject")
+  note         String?
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([requestId])
+  @@map("store_change_request_events")
+}
+
+model StoreDocument {
+  id              String              @id @default(uuid(7)) @db.Uuid
+  storeId         String              @map("store_id") @db.Uuid
+  store           Store               @relation(fields: [storeId], references: [id])
+  economicGroupId String              @map("economic_group_id") @db.Uuid
+  docType         StoreDocumentType   @map("doc_type")
+  requestId       String?             @map("request_id") @db.Uuid
+  request         StoreChangeRequest? @relation(fields: [requestId], references: [id])
+  fileName        String              @map("file_name")
+  mimeType        String              @map("mime_type")
+  sizeBytes       Int                 @map("size_bytes")
+  validUntil      DateTime?           @map("valid_until") @db.Date
+  uploadedByKind  ActorKind           @map("uploaded_by_kind")
+  uploadedBy      String              @map("uploaded_by")
+  supersededAt    DateTime?           @map("superseded_at") @db.Timestamptz(3)
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  file            StoreDocumentFile?
+
+  @@index([storeId, docType])
+  @@map("store_documents")
+}
+
+// O arquivo fica no banco, sob o mesmo isolamento da loja (research.md R6).
+model StoreDocumentFile {
+  documentId String        @id @map("document_id") @db.Uuid
+  document   StoreDocument @relation(fields: [documentId], references: [id])
+  content    Bytes
+
+  @@map("store_document_files")
+}
+
+// Histórico da loja: edições, solicitações, documentos, validações e cobranças. Somente acréscimo.
+model StoreHistory {
+  id              String           @id @default(uuid(7)) @db.Uuid
+  storeId         String           @map("store_id") @db.Uuid
+  store           Store            @relation(fields: [storeId], references: [id])
+  economicGroupId String           @map("economic_group_id") @db.Uuid
+  kind            StoreHistoryKind
+  fieldKey        String?          @map("field_key")
+  fieldLabel      String           @map("field_label")
+  oldValue        String?          @map("old_value")
+  newValue        String?          @map("new_value")
+  justification   String?
+  requestId       String?          @map("request_id") @db.Uuid
+  actorKind       ActorKind        @map("actor_kind")
+  actorSubject    String           @map("actor_subject")
+  actorRole       String           @map("actor_role")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([storeId, createdAt])
+  @@map("store_history")
+}
+
+// Catálogos da Farmarcas (serviços, sistemas, PBMs, estratégias, mobiliário, ferramentas, canais),
+// mantidos em Configurações (specs/004). Dado de plataforma, sem tenant: o RLS libera a leitura
+// para todos e a gravação só para a plataforma. Valores de negociação em centavos.
+// Nome único por lista entre os não excluídos: índice parcial escrito à mão na migration.
+model CatalogItem {
+  id                     String              @id @default(uuid(7)) @db.Uuid
+  kind                   CatalogKind
+  name                   String
+  // Agrupador por lista: tipo do mobiliário, operadora do PBM, categoria da ferramenta, prop/terc.
+  groupLabel             String?             @map("group_label")
+  description            String?
+  negotiatedMonthlyCents Int?                @map("negotiated_monthly_cents")
+  sort                   Int                 @default(0)
+  active                 Boolean             @default(true)
+  // Chave da galeria de ícones (só mobiliário).
+  icon                   String?
+  selfService            Boolean             @default(false) @map("self_service")
+  usedByScale            Boolean             @default(false) @map("used_by_scale")
+  version                Int                 @default(1)
+  createdAt              DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt              DateTime?           @map("deleted_at") @db.Timestamptz(3)
+  entries                StoreCatalogEntry[]
+  demandSystemStores     Store[]             @relation("StoreDemandSystem")
+  departmentEmployees    FarmarcasEmployee[] @relation("EmployeeDepartment")
+  occupationEmployees    FarmarcasEmployee[] @relation("EmployeeOccupation")
+
+  @@index([kind, sort])
+  @@map("catalog_items")
+}
+
+// Horário de funcionamento por dia (o módulo Escala consome daqui).
+model StoreOpeningHour {
+  id       String  @id @default(uuid(7)) @db.Uuid
+  storeId  String  @map("store_id") @db.Uuid
+  store    Store   @relation(fields: [storeId], references: [id])
+  day      Weekday
+  isOpen   Boolean @map("is_open")
+  opensAt  String? @map("opens_at")
+  closesAt String? @map("closes_at")
+  is24h    Boolean @default(false) @map("is_24h")
+  isOnCall Boolean @default(false) @map("is_on_call")
+
+  @@unique([storeId, day])
+  @@map("store_opening_hours")
+}
+
+// Resposta da loja a um item de catálogo: marcado (serviço, PBM...), quantidade (mobiliário),
+// "desde" (estratégia), uso e custo (ferramenta), identificação (canal).
+model StoreCatalogEntry {
+  id               String      @id @default(uuid(7)) @db.Uuid
+  storeId          String      @map("store_id") @db.Uuid
+  store            Store       @relation(fields: [storeId], references: [id])
+  catalogItemId    String      @map("catalog_item_id") @db.Uuid
+  catalogItem      CatalogItem @relation(fields: [catalogItemId], references: [id])
+  uses             Boolean?
+  identifier       String?
+  monthlyCostCents Int?        @map("monthly_cost_cents")
+  quantity         Int?
+  tradeQuantity    Int?        @map("trade_quantity")
+  since            DateTime?   @db.Date
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([storeId, catalogItemId])
+  @@map("store_catalog_entries")
+}
+
+// Seções livres de informação, criadas pela Farmarcas e visíveis para o grupo.
+model StoreFreeSection {
+  id        String           @id @default(uuid(7)) @db.Uuid
+  storeId   String           @map("store_id") @db.Uuid
+  store     Store            @relation(fields: [storeId], references: [id])
+  title     String
+  createdBy String           @map("created_by")
+  sort      Int              @default(0)
+  deletedAt DateTime?        @map("deleted_at") @db.Timestamptz(3)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  fields    StoreFreeField[]
+
+  @@index([storeId])
+  @@map("store_free_sections")
+}
+
+model StoreFreeField {
+  id        String           @id @default(uuid(7)) @db.Uuid
+  sectionId String           @map("section_id") @db.Uuid
+  section   StoreFreeSection @relation(fields: [sectionId], references: [id])
+  label     String
+  value     String
+  sort      Int              @default(0)
+
+  @@index([sectionId])
+  @@map("store_free_fields")
+}
+
+// Ferramenta ou canal que o grupo incluiu e não está no catálogo da Farmarcas.
+model StoreCustomEntry {
+  id               String      @id @default(uuid(7)) @db.Uuid
+  storeId          String      @map("store_id") @db.Uuid
+  store            Store       @relation(fields: [storeId], references: [id])
+  kind             CatalogKind
+  name             String
+  category         String?
+  identifier       String?
+  monthlyCostCents Int?        @map("monthly_cost_cents")
+  deletedAt        DateTime?   @map("deleted_at") @db.Timestamptz(3)
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([storeId])
+  @@map("store_custom_entries")
+}
+
+// Funcionário da Farmarcas (operador). Dado da plataforma, fora de qualquer tenant; o grupo
+// só lê o próprio Anjo (política tenant_angel no SQL da migration).
+model FarmarcasEmployee {
+  id           String                 @id @default(uuid(7)) @db.Uuid
+  name         String
+  email        String
+  gender       EmployeeGender?
+  // Celular é obrigatório na API; fica nulo só em cadastro antigo sem telefone (spec 005).
+  mobile       String?                @db.Char(11)
+  landline     String?                @db.Char(10)
+  departmentId String                 @map("department_id") @db.Uuid
+  department   CatalogItem            @relation("EmployeeDepartment", fields: [departmentId], references: [id])
+  occupationId String                 @map("occupation_id") @db.Uuid
+  occupation   CatalogItem            @relation("EmployeeOccupation", fields: [occupationId], references: [id])
+  status       EmployeeStatus         @default(ACTIVE)
+  terminatedAt DateTime?              @map("terminated_at") @db.Timestamptz(3)
+  version      Int                    @default(1)
+  deletedAt    DateTime?              @map("deleted_at") @db.Timestamptz(3)
+  createdAt    DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  angelOf      EconomicGroup[]
+  accesses     EmployeeSystemAccess[]
+
+  @@index([departmentId])
+  @@index([occupationId])
+  @@map("farmarcas_employees")
+}
+
+// Acesso de um funcionário a um sistema da Suite (spec 005). Um vigente por sistema (índice
+// parcial na migration); trocar o papel encerra o vigente e abre outro.
+model EmployeeSystemAccess {
+  id         String            @id @default(uuid(7)) @db.Uuid
+  employeeId String            @map("employee_id") @db.Uuid
+  employee   FarmarcasEmployee @relation(fields: [employeeId], references: [id])
+  system     SuiteSystem
+  role       SuiteRole
+  grantedAt  DateTime          @default(now()) @map("granted_at") @db.Timestamptz(3)
+  grantedBy  String            @map("granted_by")
+  revokedAt  DateTime?         @map("revoked_at") @db.Timestamptz(3)
+  revokedBy  String?           @map("revoked_by")
+
+  @@index([employeeId])
+  @@map("employee_system_accesses")
+}
+
+// Parceiro da Farmarcas: indústria ou distribuidor. Dado da plataforma, sem tenant.
+model Partner {
+  id        String           @id @default(uuid(7)) @db.Uuid
+  type      PartnerType
+  cnpj      String           @db.Char(14)
+  legalName String           @map("legal_name")
+  tradeName String           @map("trade_name")
+  status    PartnerStatus    @default(ACTIVE)
+  deletedAt DateTime?        @map("deleted_at") @db.Timestamptz(3)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  contacts  PartnerContact[]
+
+  @@map("partners")
+}
+
+// Contato comercial do parceiro; no máximo um principal (índice parcial no SQL).
+model PartnerContact {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  partnerId String    @map("partner_id") @db.Uuid
+  partner   Partner   @relation(fields: [partnerId], references: [id])
+  name      String
+  jobTitle  String?   @map("job_title")
+  email     String?
+  phone     String?
+  isPrimary Boolean   @default(false) @map("is_primary")
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([partnerId])
+  @@map("partner_contacts")
+}
+
+// Cartão Alelo do grupo (um por grupo), vinculado a uma loja ativa do mesmo grupo.
+// CPF, nascimento e número só para o administrador; o número nunca sai inteiro da API.
+model GroupBenefitCard {
+  id              String        @id @default(uuid(7)) @db.Uuid
+  economicGroupId String        @unique @map("economic_group_id") @db.Uuid
+  economicGroup   EconomicGroup @relation(fields: [economicGroupId], references: [id])
+  storeId         String        @map("store_id") @db.Uuid
+  store           Store         @relation(fields: [storeId], references: [id])
+  holderName      String        @map("holder_name")
+  holderCpf       String        @map("holder_cpf") @db.Char(11)
+  holderBirthDate DateTime      @map("holder_birth_date") @db.Date
+  holderPseudonym String        @unique @map("holder_pseudonym")
+  cardNumber      String        @map("card_number")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("group_benefit_cards")
 }

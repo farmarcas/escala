@@ -79,6 +79,25 @@ Cada pasta traz um **guia** (as regras daquela tecnologia) e **skills** (o passo
 
 ---
 
+## 🏢 Backoffice Farmarcas (Radar Suite)
+
+Primeira funcionalidade construída sobre o esqueleto ([spec 001](specs/001-backoffice-cadastros/spec.md)). Com o ambiente no ar, abra **http://localhost:3000**:
+
+| Tela | Endereço | O que faz |
+|---|---|---|
+| Visão geral | `/` | Indicadores do cadastro e atalhos |
+| Grupos econômicos | `/grupos`, `/grupos/0417` | Cadastro do grupo (o tenant), proprietário, lojas, suspender/arquivar/restaurar e auditoria |
+| Lojas | `/lojas` | Todas as lojas da rede, com filtros |
+| Marcas Farmarcas | `/marcas` | Catálogo de marcas (só exclui marca sem loja) |
+
+- **Multi-tenant**: cada grupo econômico é um tenant. O próprio banco isola os dados de cada grupo, e a Farmarcas entra por um caminho exclusivo (`/api/v1/backoffice`).
+- **Papel de demonstração**: no canto superior direito, alterne entre Administrador e Analista. O analista só lê e vê o proprietário por código. Funciona só no ambiente local (`DEMO_IDENTITY_ENABLED`); em produção o papel virá do login.
+- **Página da loja** (`/lojas/2`, [spec 002](specs/002-pagina-da-loja/spec.md)): dados em camadas, solicitações de mudança com etapas, preenchimento do cadastro e validação a cada 6 meses, estrutura e horário, estratégias, mobiliário, ferramentas externas (com economia possível), canais, documentos com validade, responsáveis e histórico.
+- **Área do grupo** (`/grupo/lojas`): no papel de demonstração, escolha "Proprietário do grupo" e um grupo. Ele vê só as próprias lojas (menu escuro, ação azul).
+- **Dados de exemplo** fictícios entram sozinhos ao subir a API (`backend/node/seeds/`, sem apagar nada).
+
+---
+
 ## 🛡️ Regras que protegem você
 
 As regras ficam na [constituição do projeto](.specify/memory/constitution.md). As principais:

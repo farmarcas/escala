@@ -10,6 +10,8 @@ export default defineConfig({
       PORT: '4000',
       // Vem do Compose (TEST_DATABASE_URL); nenhuma credencial escrita aqui.
       DATABASE_URL: process.env.TEST_DATABASE_URL ?? '',
+      MIGRATION_DATABASE_URL: process.env.TEST_MIGRATION_DATABASE_URL ?? '',
+      DEMO_IDENTITY_ENABLED: 'true',
     },
   },
 });

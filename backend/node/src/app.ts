@@ -4,12 +4,25 @@ import { prisma } from './shared/database/prisma.js';
 import { logger } from './shared/logger.js';
 import { errorHandler } from './shared/middlewares/error-handler.js';
 import { requestId } from './shared/middlewares/request-id.js';
+import { env } from './config/env.js';
+import { backofficeRouter, type BackofficeDeps } from './modules/backoffice/backoffice.routes.js';
+import { demoRouter } from './modules/demo/demo.routes.js';
+import { tenantRouter } from './modules/tenant/tenant.routes.js';
 import { usersRouter } from './modules/users/users.routes.js';
 import type { UsersRepository } from './modules/users/users.service.js';
+import {
+  demoIdentityProvider,
+  noIdentityProvider,
+} from './shared/identity/demo-identity-provider.js';
 
-type AppDeps = {
+type AppDeps = Partial<BackofficeDeps> & {
   usersRepository?: UsersRepository;
 };
+
+// Provedor de identidade: o de demonstração só existe com DEMO_IDENTITY_ENABLED (nunca em produção).
+const defaultIdentityProvider = env.DEMO_IDENTITY_ENABLED
+  ? demoIdentityProvider
+  : noIdentityProvider;
 
 export const createApp = (deps: AppDeps = {}) => {
   const app = express();
@@ -40,6 +53,12 @@ export const createApp = (deps: AppDeps = {}) => {
   });
 
   app.use('/api/v1/users', usersRouter(deps.usersRepository));
+  const identityProvider = deps.identityProvider ?? defaultIdentityProvider;
+  app.use('/api/v1/backoffice', backofficeRouter({ ...deps, identityProvider }));
+  // Caminho do grupo econômico (tenant): separado do operador, isolado pelo RLS.
+  app.use('/api/v1/tenant', tenantRouter(identityProvider));
+  // Seletor de grupo do papel de demonstração: só existe no ambiente local.
+  if (env.DEMO_IDENTITY_ENABLED) app.use('/api/v1/demo', demoRouter());
 
   app.use((_req, res) => {
     res.status(404).json({
